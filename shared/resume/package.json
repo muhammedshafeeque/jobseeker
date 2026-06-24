@@ -1,0 +1,9 @@
+{
+  "name": "@personal/resume",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2"
+  }
+}
