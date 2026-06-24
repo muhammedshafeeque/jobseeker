@@ -1,0 +1,10 @@
+{
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "MSP Admin",
+        "supportEmail": "crapeestar@gmail.com"
+      }
+    }
+  }
+}

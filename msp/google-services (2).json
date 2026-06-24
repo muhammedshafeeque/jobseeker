@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "426341583552",
+    "project_id": "muhammed-shafeeque",
+    "storage_bucket": "muhammed-shafeeque.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426341583552:android:4616c8c4bd81648f3e7b25",
+        "android_client_info": {
+          "package_name": "msp.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdh7D1PwF_75PeuWcfXiLE6wACcViVF_M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
