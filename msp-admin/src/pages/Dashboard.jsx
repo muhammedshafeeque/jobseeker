@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Briefcase, MessageSquare, TrendingUp, Clock } from 'lucide-react'
+import { Briefcase, TrendingUp, Clock, CheckCircle, AlertTriangle, BarChart2 } from 'lucide-react'
 import api from '../lib/api'
 import socket from '../lib/socket'
 
-const statCard = (icon, label, value, color, to) => (
-  <Link to={to} key={label} className="bg-zinc-900 rounded-2xl p-5 border border-zinc-700/60 hover:shadow-md transition flex items-center gap-4">
+const StatCard = ({ icon, label, value, color, to }) => (
+  <Link to={to} className="bg-zinc-900 rounded-2xl p-5 border border-zinc-700/60 hover:shadow-md hover:border-blue-800/60 transition flex items-center gap-4">
     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>{icon}</div>
     <div>
       <p className="text-2xl font-bold text-zinc-50">{value ?? '—'}</p>
@@ -16,58 +16,99 @@ const statCard = (icon, label, value, color, to) => (
 
 export default function Dashboard() {
   const [jobStats, setJobStats] = useState(null)
-  const [contactStats, setContactStats] = useState(null)
+  const [analytics, setAnalytics] = useState(null)
 
-  const load = async () => {
-    const [j, c] = await Promise.all([
-      api.get('/jobs/stats').then(r => r.data),
-      api.get('/contacts/stats').then(r => r.data),
-    ])
-    setJobStats(j)
-    setContactStats(c)
-  }
+  const loadStats = () => api.get('/jobs/stats').then(r => setJobStats(r.data)).catch(() => {})
+  const loadAnalytics = () => api.get('/jobs/analytics').then(r => setAnalytics(r.data)).catch(() => {})
 
   useEffect(() => {
-    load()
-    socket.on('job:created', load)
-    socket.on('job:updated', load)
-    socket.on('contact:new', load)
-    socket.on('contact:updated', load)
-    return () => {
-      socket.off('job:created', load)
-      socket.off('job:updated', load)
-      socket.off('contact:new', load)
-      socket.off('contact:updated', load)
-    }
+    loadStats()
+    loadAnalytics()
+    socket.on('job:created', loadStats)
+    socket.on('job:updated', loadStats)
+    return () => { socket.off('job:created', loadStats); socket.off('job:updated', loadStats) }
   }, [])
 
   const byStatus = arr => Object.fromEntries((arr ?? []).map(s => [s._id, s.count]))
   const jbs = byStatus(jobStats?.byStatus)
-  const cts = byStatus(contactStats?.byStatus)
+  const interviewCount = (jbs.interview_1 || 0) + (jbs.interview_2 || 0) + (jbs.interview_3 || 0)
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold text-zinc-50 mb-6">Dashboard</h1>
+    <div className="p-8 space-y-8">
+      <h1 className="text-2xl font-bold text-zinc-50">Dashboard</h1>
 
-      <section className="mb-8">
+      {/* Follow-up alert */}
+      {analytics?.followUpNeeded > 0 && (
+        <Link to="/jobs" className="flex items-center gap-3 bg-amber-900/20 border border-amber-700/40 rounded-2xl px-5 py-4 hover:bg-amber-900/30 transition">
+          <AlertTriangle size={18} className="text-amber-400 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-300">
+              {analytics.followUpNeeded} application{analytics.followUpNeeded !== 1 ? 's' : ''} need follow-up
+            </p>
+            <p className="text-xs text-amber-500">Applied 7+ days ago with no response — open Job Tracker to review</p>
+          </div>
+        </Link>
+      )}
+
+      {/* Job stats */}
+      <section>
         <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Job Applications</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCard(<Briefcase size={22} className="text-blue-400" />, 'Total', jobStats?.total, 'bg-blue-900/20', '/jobs')}
-          {statCard(<TrendingUp size={22} className="text-emerald-400" />, 'Interviews', (jbs.interview_1 || 0) + (jbs.interview_2 || 0) + (jbs.interview_3 || 0), 'bg-emerald-900/20', '/jobs?status=interview_1')}
-          {statCard(<Clock size={22} className="text-amber-400" />, 'Awaiting Response', jbs.applied || 0, 'bg-amber-900/20', '/jobs?status=applied')}
-          {statCard(<TrendingUp size={22} className="text-purple-400" />, 'Offers', jbs.offer || 0, 'bg-purple-900/20', '/jobs?status=offer')}
+          <StatCard icon={<Briefcase size={22} className="text-blue-400" />} label="Total" value={jobStats?.total} color="bg-blue-900/20" to="/jobs" />
+          <StatCard icon={<TrendingUp size={22} className="text-purple-400" />} label="Interviews" value={interviewCount} color="bg-purple-900/20" to="/jobs" />
+          <StatCard icon={<Clock size={22} className="text-amber-400" />} label="Applied / Awaiting" value={jbs.applied || 0} color="bg-amber-900/20" to="/jobs" />
+          <StatCard icon={<CheckCircle size={22} className="text-emerald-400" />} label="Offers" value={(jbs.offer || 0) + (jbs.accepted || 0)} color="bg-emerald-900/20" to="/jobs" />
         </div>
       </section>
 
-      <section>
-        <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Enquiries</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCard(<MessageSquare size={22} className="text-rose-400" />, 'Total', contactStats?.total, 'bg-rose-900/20', '/enquiries')}
-          {statCard(<MessageSquare size={22} className="text-rose-300" />, 'Unread', cts.unread || 0, 'bg-rose-900/40', '/enquiries?status=unread')}
-          {statCard(<MessageSquare size={22} className="text-indigo-400" />, 'Connected', cts.connected || 0, 'bg-indigo-900/20', '/enquiries?status=connected')}
-          {statCard(<MessageSquare size={22} className="text-zinc-400" />, 'Closed', cts.closed || 0, 'bg-zinc-800', '/enquiries?status=closed')}
-        </div>
-      </section>
+      {/* Analytics summary */}
+      {analytics && (
+        <section>
+          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">This Week's Activity</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-700/60">
+              <p className="text-xs text-zinc-400 mb-1">Response Rate</p>
+              <p className="text-2xl font-bold text-zinc-50">{analytics.responseRate}%</p>
+              <p className="text-xs text-zinc-500 mt-1">of applications got a response</p>
+            </div>
+            <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-700/60">
+              <p className="text-xs text-zinc-400 mb-1">Active Pipeline</p>
+              <p className="text-2xl font-bold text-zinc-50">{analytics.activeCount}</p>
+              <p className="text-xs text-zinc-500 mt-1">applications in progress</p>
+            </div>
+            {analytics.avgDaysToResponse != null && (
+              <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-700/60">
+                <p className="text-xs text-zinc-400 mb-1">Avg. Days to Response</p>
+                <p className="text-2xl font-bold text-zinc-50">{analytics.avgDaysToResponse}</p>
+                <p className="text-xs text-zinc-500 mt-1">days from apply to first reply</p>
+              </div>
+            )}
+          </div>
+
+          {/* Mini bar chart */}
+          {analytics.weeklyData?.some(w => w.count > 0) && (
+            <div className="mt-4 bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart2 size={14} className="text-zinc-400" />
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Applications per Week</p>
+              </div>
+              <div className="flex items-end gap-2 h-20">
+                {analytics.weeklyData.map((w, i) => {
+                  const max = Math.max(...analytics.weeklyData.map(x => x.count), 1)
+                  const h = Math.round((w.count / max) * 100)
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                      {w.count > 0 && <span className="text-[10px] text-zinc-500">{w.count}</span>}
+                      <div className="w-full bg-blue-600/70 rounded-t transition-all" style={{ height: `${h}%`, minHeight: w.count ? 4 : 0 }} />
+                      <span className="text-[9px] text-zinc-600 truncate w-full text-center">{w.week}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }

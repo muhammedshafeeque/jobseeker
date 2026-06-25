@@ -6,6 +6,8 @@ const router = Router()
 router.use(requireAuth)
 
 router.get('/stats', JobApplicationController.stats)
+router.get('/analytics', JobApplicationController.analytics)
+router.get('/export', JobApplicationController.exportCsv)
 router.get('/', JobApplicationController.list)
 router.post('/', JobApplicationController.create)
 router.get('/:id', JobApplicationController.getOne)

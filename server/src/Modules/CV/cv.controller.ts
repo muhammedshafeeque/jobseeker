@@ -34,6 +34,34 @@ STRICT RULES:
 5. Professional, confident tone; avoid clichés and filler
 6. Separate paragraphs with a single blank line`
 
+const ATS_SYSTEM = `You analyse a candidate's resume against a job description and return a JSON ATS compatibility report.
+
+Return ONLY valid JSON:
+{
+  "score": number (0-100),
+  "verdict": "Excellent" | "Good" | "Fair" | "Poor",
+  "matchedKeywords": string[],
+  "missingKeywords": string[],
+  "strengths": string[],
+  "gaps": string[],
+  "suggestions": string[]
+}
+
+Be specific and actionable. Base everything strictly on the provided resume and JD.`
+
+const INTERVIEW_PREP_SYSTEM = `You generate targeted interview preparation based on a candidate's resume and job description.
+
+Return ONLY valid JSON:
+{
+  "technicalQuestions": [{ "question": string, "hint": string }],
+  "behavioralQuestions": [{ "question": string, "hint": string }],
+  "questionsToAsk": string[]
+}
+
+Generate 5 technical and 5 behavioral questions relevant to the specific role and the candidate's background.
+"hint" should be 1-2 sentences guiding how to answer based on the candidate's actual experience.
+"questionsToAsk" are 4 smart questions the candidate should ask the interviewer.`
+
 const RESUME_PARSE_SYSTEM = `You extract structured resume data from raw CV text.
 
 Return ONLY valid JSON with exactly this schema:
@@ -101,6 +129,18 @@ export class CVController {
       const profileData = req.body as ResumeData
       if (!profileData?.header?.name) {
         throw { status: 400, message: 'profileData with header.name is required' }
+      }
+      // Save current version before overwriting (keep last 10)
+      const existing = await CV.findOne({ userId }).select('+versions')
+      if (existing?.profileData) {
+        await CV.updateOne({ userId }, {
+          $push: {
+            versions: {
+              $each: [{ profileData: existing.profileData, savedAt: new Date() }],
+              $slice: -10,
+            },
+          },
+        })
       }
       const cv = await CV.findOneAndUpdate(
         { userId },
@@ -293,6 +333,108 @@ export class CVController {
     } catch (e) {
       next(e)
     }
+  }
+
+  static async atsScore(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const { jd } = req.body
+      if (!jd?.trim()) throw { status: 400, message: 'Job description is required' }
+      const base = await getUserCV(userId)
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1500,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: ATS_SYSTEM },
+          { role: 'user', content: `RESUME:\n${JSON.stringify(base, null, 2)}\n\n---\nJOB DESCRIPTION:\n${jd}` },
+        ],
+      })
+      const raw = completion.choices[0]?.message?.content ?? '{}'
+      res.json(JSON.parse(raw))
+    } catch (e) { next(e) }
+  }
+
+  static async interviewPrep(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const { jd, company, role } = req.body
+      if (!jd?.trim()) throw { status: 400, message: 'Job description is required' }
+      const base = await getUserCV(userId)
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 2500,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: INTERVIEW_PREP_SYSTEM },
+          {
+            role: 'user',
+            content: `CANDIDATE RESUME:\n${JSON.stringify(base, null, 2)}\n\n---\nCOMPANY: ${company ?? ''}\nROLE: ${role ?? ''}\nJOB DESCRIPTION:\n${jd}`,
+          },
+        ],
+      })
+      const raw = completion.choices[0]?.message?.content ?? '{}'
+      res.json(JSON.parse(raw))
+    } catch (e) { next(e) }
+  }
+
+  static async coverLetterText(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const { jd, company, role } = req.body as { jd?: string; company?: string; role?: string }
+      if (!jd?.trim()) throw { status: 400, message: 'Job description is required' }
+      const base = await getUserCV(userId)
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1200,
+        messages: [
+          { role: 'system', content: COVER_LETTER_SYSTEM },
+          {
+            role: 'user',
+            content: `CANDIDATE RESUME:\n${JSON.stringify(base, null, 2)}\n\n---\nCOMPANY: ${company ?? 'the company'}\nROLE: ${role ?? 'the position'}\nJOB DETAILS:\n${jd}`,
+          },
+        ],
+      })
+      const body = (completion.choices[0]?.message?.content ?? '').trim()
+      if (!body) throw { status: 502, message: 'Cover letter generation failed' }
+      res.json({ body, header: base.header })
+    } catch (e) { next(e) }
+  }
+
+  static async listVersions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const cv = await CV.findOne({ userId }).select('+versions')
+      if (!cv) return res.json([])
+      const versions = ((cv as any).versions ?? []).map((v: any, i: number) => ({
+        index: i,
+        savedAt: v.savedAt,
+        name: v.profileData?.header?.name ?? 'Unnamed',
+        experienceCount: v.profileData?.experience?.length ?? 0,
+        skillCount: v.profileData?.coreSkills?.length ?? 0,
+      })).reverse()
+      res.json(versions)
+    } catch (e) { next(e) }
+  }
+
+  static async restoreVersion(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const idx = parseInt(req.params.index as string)
+      const cv = await CV.findOne({ userId }).select('+versions')
+      if (!cv) return res.status(404).json({ message: 'No CV found' })
+      const versions = (cv as any).versions ?? []
+      if (idx < 0 || idx >= versions.length) return res.status(400).json({ message: 'Invalid version index' })
+      const restored = versions[idx].profileData
+      // Save current as a version before restoring
+      if (cv.profileData) {
+        await CV.updateOne({ userId }, {
+          $push: { versions: { $each: [{ profileData: cv.profileData, savedAt: new Date() }], $slice: -10 } },
+        })
+      }
+      await CV.updateOne({ userId }, { $set: { profileData: restored } })
+      res.json({ profileData: restored, message: 'Version restored' })
+    } catch (e) { next(e) }
   }
 
   static async listTemplates(_req: Request, res: Response, next: NextFunction) {

@@ -14,5 +14,10 @@ router.get('/resume.pdf', CVController.resumePdf)
 router.post('/tailor', CVController.tailor)
 router.post('/pdf', CVController.tailorPdf)
 router.post('/cover-letter/pdf', CVController.coverLetterPdf)
+router.post('/cover-letter/text', CVController.coverLetterText)
+router.post('/ats-score', CVController.atsScore)
+router.post('/interview-prep', CVController.interviewPrep)
+router.get('/versions', CVController.listVersions)
+router.post('/versions/restore/:index', CVController.restoreVersion)
 
 export default router

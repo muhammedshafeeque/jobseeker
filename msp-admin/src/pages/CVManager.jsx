@@ -366,6 +366,349 @@ function ProfileEditor({ initial, onSaved }) {
   )
 }
 
+// ── ATS Score Section ─────────────────────────────────────────────────────────
+
+function AtsSection() {
+  const [jd, setJd] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState(null)
+
+  const run = async () => {
+    if (!jd.trim()) return
+    setLoading(true)
+    setResult(null)
+    try {
+      const { data } = await api.post('/cv/ats-score', { jd })
+      setResult(data)
+    } catch (err) {
+      alert(err.response?.data?.message || 'ATS analysis failed')
+    } finally { setLoading(false) }
+  }
+
+  const scoreColor = s => s >= 75 ? 'text-emerald-400' : s >= 50 ? 'text-yellow-400' : 'text-red-400'
+  const scoreBg = s => s >= 75 ? 'bg-emerald-500' : s >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <h2 className="text-xl font-bold text-zinc-50 mb-4">ATS Score Checker</h2>
+      <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5">
+        <p className="text-sm text-zinc-400 mb-3">Paste a job description to see how well your CV matches and what keywords are missing.</p>
+        <textarea
+          value={jd} onChange={e => setJd(e.target.value)}
+          placeholder="Paste the job description here…"
+          rows={7}
+          className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-4 py-3 text-sm text-zinc-200 placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono mb-3"
+        />
+        <button onClick={run} disabled={loading || !jd.trim()}
+          className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-medium disabled:opacity-60">
+          {loading ? <Loader2 size={15} className="animate-spin" /> : '🔍'} {loading ? 'Analysing…' : 'Analyse'}
+        </button>
+      </div>
+
+      {result && (
+        <div className="space-y-4">
+          {/* Score */}
+          <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5 flex items-center gap-5">
+            <div className="relative w-20 h-20 shrink-0">
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none" stroke="#3f3f46" strokeWidth="3" />
+                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none" strokeWidth="3"
+                  stroke={result.score >= 75 ? '#10b981' : result.score >= 50 ? '#eab308' : '#ef4444'}
+                  strokeDasharray={`${result.score}, 100`} strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={`text-lg font-bold ${scoreColor(result.score)}`}>{result.score}</span>
+              </div>
+            </div>
+            <div>
+              <p className={`text-2xl font-bold ${scoreColor(result.score)}`}>{result.verdict}</p>
+              <p className="text-sm text-zinc-400">ATS Match Score</p>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            {result.matchedKeywords?.length > 0 && (
+              <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-4">
+                <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">✓ Matched Keywords</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {result.matchedKeywords.map((k, i) => (
+                    <span key={i} className="bg-emerald-900/20 border border-emerald-700/30 text-emerald-300 text-xs px-2 py-0.5 rounded-lg">{k}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.missingKeywords?.length > 0 && (
+              <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-4">
+                <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">✗ Missing Keywords</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {result.missingKeywords.map((k, i) => (
+                    <span key={i} className="bg-red-900/20 border border-red-700/30 text-red-300 text-xs px-2 py-0.5 rounded-lg">{k}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {result.strengths?.length > 0 && (
+            <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-4">
+              <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Strengths</p>
+              <ul className="space-y-1.5">
+                {result.strengths.map((s, i) => <li key={i} className="text-sm text-zinc-300 flex gap-2"><span className="text-emerald-400 shrink-0">+</span>{s}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {result.suggestions?.length > 0 && (
+            <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-4">
+              <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Suggestions to Improve</p>
+              <ul className="space-y-1.5">
+                {result.suggestions.map((s, i) => <li key={i} className="text-sm text-zinc-300 flex gap-2"><span className="text-blue-400 shrink-0">→</span>{s}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Interview Prep Section ────────────────────────────────────────────────────
+
+function InterviewPrepSection() {
+  const [form, setForm] = useState({ jd: '', company: '', role: '' })
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState(null)
+
+  const run = async () => {
+    if (!form.jd.trim()) return
+    setLoading(true)
+    setResult(null)
+    try {
+      const { data } = await api.post('/cv/interview-prep', form)
+      setResult(data)
+    } catch (err) {
+      alert(err.response?.data?.message || 'Generation failed')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <h2 className="text-xl font-bold text-zinc-50 mb-4">Interview Prep Generator</h2>
+      <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5 space-y-3">
+        <p className="text-sm text-zinc-400">Get role-specific interview questions and model answers based on your CV.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium text-zinc-400 block mb-1">Company</label>
+            <input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="Google" className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-zinc-400 block mb-1">Role</label>
+            <input value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} placeholder="Senior Frontend Engineer" className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+        <textarea
+          value={form.jd} onChange={e => setForm(f => ({ ...f, jd: e.target.value }))}
+          placeholder="Paste the job description here…"
+          rows={6}
+          className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-4 py-3 text-sm text-zinc-200 placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+        />
+        <button onClick={run} disabled={loading || !form.jd.trim()}
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium disabled:opacity-60">
+          {loading ? <Loader2 size={15} className="animate-spin" /> : '🎯'} {loading ? 'Generating questions…' : 'Generate Prep Pack'}
+        </button>
+      </div>
+
+      {result && (
+        <div className="space-y-4">
+          {result.technicalQuestions?.length > 0 && (
+            <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5">
+              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-3">Technical Questions</p>
+              <div className="space-y-4">
+                {result.technicalQuestions.map((q, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <p className="text-sm font-medium text-zinc-100">{i + 1}. {q.question}</p>
+                    <p className="text-xs text-zinc-400 bg-zinc-800 rounded-xl px-3 py-2 leading-relaxed">💡 {q.hint}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.behavioralQuestions?.length > 0 && (
+            <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5">
+              <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-3">Behavioral Questions</p>
+              <div className="space-y-4">
+                {result.behavioralQuestions.map((q, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <p className="text-sm font-medium text-zinc-100">{i + 1}. {q.question}</p>
+                    <p className="text-xs text-zinc-400 bg-zinc-800 rounded-xl px-3 py-2 leading-relaxed">💡 {q.hint}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.questionsToAsk?.length > 0 && (
+            <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5">
+              <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">Questions to Ask the Interviewer</p>
+              <ul className="space-y-1.5">
+                {result.questionsToAsk.map((q, i) => (
+                  <li key={i} className="text-sm text-zinc-300 flex gap-2"><span className="text-emerald-400 shrink-0">→</span>{q}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Cover Letter Section ──────────────────────────────────────────────────────
+
+function CoverLetterSection() {
+  const [form, setForm] = useState({ jd: '', company: '', role: '' })
+  const [loading, setLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [text, setText] = useState('')
+  const [header, setHeader] = useState(null)
+  const [downloading, setDownloading] = useState(false)
+
+  const generate = async () => {
+    if (!form.jd.trim()) return
+    setGenerating(true)
+    setText('')
+    try {
+      const { data } = await api.post('/cv/cover-letter/text', form)
+      setText(data.body)
+      setHeader(data.header)
+    } catch (err) {
+      alert(err.response?.data?.message || 'Generation failed')
+    } finally { setGenerating(false) }
+  }
+
+  const downloadPdf = async () => {
+    setDownloading(true)
+    try {
+      const payload = { jd: form.jd, company: form.company, role: form.role }
+      const response = await api.post('/cv/cover-letter/pdf', payload, { responseType: 'blob' })
+      const url = URL.createObjectURL(response.data)
+      const a = document.createElement('a')
+      a.href = url
+      const d = response.headers?.['content-disposition']
+      a.download = d?.match(/filename="([^"]+)"/)?.[1] ?? 'CoverLetter.pdf'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch { alert('PDF download failed') }
+    finally { setDownloading(false) }
+  }
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <h2 className="text-xl font-bold text-zinc-50 mb-4">Cover Letter Editor</h2>
+      <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5 space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-medium text-zinc-400 block mb-1">Company</label>
+            <input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="Stripe" className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-zinc-400 block mb-1">Role</label>
+            <input value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} placeholder="Software Engineer" className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+        <textarea
+          value={form.jd} onChange={e => setForm(f => ({ ...f, jd: e.target.value }))}
+          placeholder="Paste the job description…"
+          rows={5}
+          className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-4 py-3 text-sm text-zinc-200 placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+        />
+        <button onClick={generate} disabled={generating || !form.jd.trim()}
+          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium disabled:opacity-60">
+          {generating ? <Loader2 size={15} className="animate-spin" /> : '✍️'} {generating ? 'Writing…' : 'Generate Draft'}
+        </button>
+      </div>
+
+      {text && (
+        <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Editable Draft</p>
+            <button onClick={downloadPdf} disabled={downloading}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-medium disabled:opacity-60">
+              {downloading ? <Loader2 size={12} className="animate-spin" /> : '↓'} Download PDF
+            </button>
+          </div>
+          <textarea
+            value={text} onChange={e => setText(e.target.value)}
+            rows={18}
+            className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-4 py-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed"
+          />
+          <p className="text-xs text-zinc-500">Edit above then download as PDF — the PDF uses the original AI-generated version, not your edits. To apply edits, download, or copy-paste elsewhere.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── History Section ───────────────────────────────────────────────────────────
+
+function HistorySection({ onRestore }) {
+  const [versions, setVersions] = useState(null)
+  const [restoring, setRestoring] = useState(null)
+
+  const load = () => api.get('/cv/versions').then(r => setVersions(r.data)).catch(() => setVersions([]))
+
+  useEffect(() => { load() }, [])
+
+  const restore = async (v) => {
+    if (!confirm(`Restore version from ${new Date(v.savedAt).toLocaleString()}? Your current profile will be saved as a version.`)) return
+    setRestoring(v.index)
+    try {
+      const { data } = await api.post(`/cv/versions/restore/${v.index}`)
+      onRestore?.(data.profileData)
+      await load()
+      alert('Version restored — switch to Edit Profile to review.')
+    } catch { alert('Restore failed') }
+    finally { setRestoring(null) }
+  }
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      <h2 className="text-xl font-bold text-zinc-50 mb-4">CV Version History</h2>
+      <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-5">
+        <p className="text-sm text-zinc-400 mb-4">Every time you save your profile, the previous version is archived here (last 10).</p>
+        {versions === null ? (
+          <div className="flex items-center gap-2 text-zinc-500 text-sm"><Loader2 size={14} className="animate-spin" /> Loading…</div>
+        ) : versions.length === 0 ? (
+          <p className="text-sm text-zinc-500">No saved versions yet. Save your profile to create the first version.</p>
+        ) : (
+          <div className="space-y-2">
+            {versions.map((v, i) => (
+              <div key={i} className="flex items-center gap-4 bg-zinc-800 rounded-xl px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-zinc-100">{v.name}</p>
+                  <p className="text-xs text-zinc-500">{v.experienceCount} experience entries · {v.skillCount} skill lines</p>
+                </div>
+                <p className="text-xs text-zinc-400 shrink-0">{new Date(v.savedAt).toLocaleString()}</p>
+                <button
+                  onClick={() => restore(v)}
+                  disabled={restoring === v.index}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-700/60 hover:bg-blue-700 text-blue-100 rounded-xl text-xs font-medium disabled:opacity-60"
+                >
+                  {restoring === v.index ? <Loader2 size={11} className="animate-spin" /> : null}
+                  Restore
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Tailor Section ────────────────────────────────────────────────────────────
 
 const getFilename = (response, fallback) => {
@@ -617,14 +960,21 @@ export default function CVManager() {
         </div>
       )}
 
-      <div className="flex items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-zinc-50">CV Manager</h1>
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        <h1 className="text-2xl font-bold text-zinc-50 mr-1">CV Manager</h1>
         <div className="flex border border-zinc-700/60 rounded-xl overflow-hidden">
-          {[['profile', 'Edit Profile'], ['tailor', 'Tailor & Download']].map(([key, label]) => (
+          {[
+            ['profile', 'Profile'],
+            ['tailor', 'Tailor'],
+            ['ats', 'ATS Score'],
+            ['prep', 'Interview Prep'],
+            ['letter', 'Cover Letter'],
+            ['history', 'History'],
+          ].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`px-4 py-1.5 text-sm font-medium transition ${activeTab === key ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+              className={`px-3.5 py-1.5 text-sm font-medium transition whitespace-nowrap ${activeTab === key ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
               {label}
             </button>
@@ -648,10 +998,12 @@ export default function CVManager() {
         </div>
       </div>
 
-      {activeTab === 'profile'
-        ? <ProfileEditor initial={cvData} onSaved={d => { setCvData(d); setCvReady?.(true) }} />
-        : <TailorSection />
-      }
+      {activeTab === 'profile' && <ProfileEditor initial={cvData} onSaved={d => { setCvData(d); setCvReady?.(true) }} />}
+      {activeTab === 'tailor' && <TailorSection />}
+      {activeTab === 'ats' && <AtsSection />}
+      {activeTab === 'prep' && <InterviewPrepSection />}
+      {activeTab === 'letter' && <CoverLetterSection />}
+      {activeTab === 'history' && <HistorySection onRestore={d => { setCvData(d); setActiveTab('profile') }} />}
     </div>
   )
 }

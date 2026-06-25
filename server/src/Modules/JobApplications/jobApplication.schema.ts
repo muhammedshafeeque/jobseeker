@@ -43,6 +43,9 @@ const jobApplicationSchema = new Schema(
     notes: { type: String },
     appliedAt: { type: Date },
     nextStep: { type: String },
+    followUpAt: { type: Date },
+    rejectionReason: { type: String },
+    interviewDate: { type: Date },
   },
   { timestamps: true },
 )

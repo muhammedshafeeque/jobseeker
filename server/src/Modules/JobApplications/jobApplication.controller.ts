@@ -101,4 +101,108 @@ export class JobApplicationController {
       next(e)
     }
   }
+
+  static async analytics(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const uid = new Types.ObjectId(userId)
+      const all = await JobApplication.find({ userId }).lean()
+
+      const byStatus = await JobApplication.aggregate([
+        { $match: { userId: uid } },
+        { $group: { _id: '$status', count: { $sum: 1 } } },
+      ])
+
+      const statusMap: Record<string, number> = Object.fromEntries(byStatus.map(s => [s._id, s.count]))
+      const total = all.length
+      const activeStatuses = ['applied','responded','phone_screen','code_test','interview_1','interview_2','interview_3']
+      const positiveStatuses = ['responded','phone_screen','code_test','interview_1','interview_2','interview_3','offer','accepted']
+      const applied = all.filter(a => a.appliedAt)
+      const responseRate = applied.length
+        ? Math.round((all.filter(a => positiveStatuses.includes(a.status)).length / applied.length) * 100)
+        : 0
+
+      // Average days to first response (draft → applied → responded)
+      const respondedApps = all.filter(a => {
+        const hist = a.statusHistory ?? []
+        return hist.some((h: any) => positiveStatuses.includes(h.status)) && a.appliedAt
+      })
+      let avgDaysToResponse: number | null = null
+      if (respondedApps.length) {
+        const totalDays = respondedApps.reduce((acc, a) => {
+          const hist = (a.statusHistory ?? []) as any[]
+          const firstPositive = hist.find((h: any) => positiveStatuses.includes(h.status))
+          if (!firstPositive || !a.appliedAt) return acc
+          return acc + Math.round((new Date(firstPositive.changedAt).getTime() - new Date(a.appliedAt).getTime()) / 86400000)
+        }, 0)
+        avgDaysToResponse = Math.round(totalDays / respondedApps.length)
+      }
+
+      // Applications per week (last 8 weeks)
+      const now = Date.now()
+      const weeklyData = Array.from({ length: 8 }, (_, i) => {
+        const weekStart = now - (7 - i) * 7 * 86400000
+        const weekEnd = weekStart + 7 * 86400000
+        return {
+          week: new Date(weekStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+          count: all.filter(a => {
+            const t = new Date(a.createdAt as Date).getTime()
+            return t >= weekStart && t < weekEnd
+          }).length,
+        }
+      })
+
+      // Follow-up needed: applied > 7 days ago, no positive response
+      const followUpNeeded = all.filter(a => {
+        if (a.status !== 'applied' || !a.appliedAt) return false
+        const days = Math.floor((Date.now() - new Date(a.appliedAt).getTime()) / 86400000)
+        return days >= 7
+      }).length
+
+      // Rejection reasons
+      const rejectionReasons = all
+        .filter(a => a.status === 'rejected' && (a as any).rejectionReason)
+        .map((a: any) => a.rejectionReason)
+
+      res.json({
+        total,
+        byStatus: statusMap,
+        responseRate,
+        avgDaysToResponse,
+        weeklyData,
+        followUpNeeded,
+        rejectionReasons,
+        activeCount: all.filter(a => activeStatuses.includes(a.status)).length,
+        offersCount: (statusMap['offer'] ?? 0) + (statusMap['accepted'] ?? 0),
+      })
+    } catch (e) {
+      next(e)
+    }
+  }
+
+  static async exportCsv(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const apps = await JobApplication.find({ userId }).lean()
+
+      const headers = ['Company','Role','Status','Location','Max Budget','Asked Budget','Applied At','Interview Date','Follow Up At','Rejection Reason','Job URL','Notes','Created At']
+      const rows = apps.map(a => [
+        a.company, a.role, a.status, a.location ?? '',
+        a.maxBudget ?? '', a.askedBudget ?? '',
+        a.appliedAt ? new Date(a.appliedAt).toLocaleDateString() : '',
+        (a as any).interviewDate ? new Date((a as any).interviewDate).toLocaleDateString() : '',
+        (a as any).followUpAt ? new Date((a as any).followUpAt).toLocaleDateString() : '',
+        (a as any).rejectionReason ?? '',
+        a.jobUrl ?? '', (a.notes ?? '').replace(/\n/g, ' '),
+        new Date(a.createdAt as Date).toLocaleDateString(),
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`))
+
+      const csv = [headers.map(h => `"${h}"`).join(','), ...rows.map(r => r.join(','))].join('\n')
+      res.setHeader('Content-Type', 'text/csv')
+      res.setHeader('Content-Disposition', `attachment; filename="JobApplications_${new Date().toISOString().slice(0,10)}.csv"`)
+      res.send(csv)
+    } catch (e) {
+      next(e)
+    }
+  }
 }
