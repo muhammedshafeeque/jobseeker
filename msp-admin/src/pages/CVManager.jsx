@@ -504,6 +504,7 @@ export default function CVManager() {
   const [activeTab, setActiveTab] = useState('profile')
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState(null) // { type: 'success'|'error', text }
 
   useEffect(() => {
     api.get('/cv')
@@ -518,13 +519,18 @@ export default function CVManager() {
       .catch(() => setView('template'))
   }, [])
 
+  const notify = (type, text) => {
+    setUploadMsg({ type, text })
+    setTimeout(() => setUploadMsg(null), 4000)
+  }
+
   const loadTemplate = async (id) => {
     try {
       const { data } = await api.get(`/cv-templates/${id}`)
       setCvData(data.data)
       setView('editor')
     } catch {
-      alert('Failed to load template')
+      notify('error', 'Failed to load template')
     }
   }
 
@@ -538,19 +544,26 @@ export default function CVManager() {
       const { data } = await api.post('/cv/upload', fd)
       if (data.profileData) {
         setCvData(data.profileData)
+        setCvReady?.(true)
         setView('editor')
+        notify('success', 'CV parsed and loaded — review and save your profile.')
       } else {
         setCvData(BLANK_PROFILE)
         setView('editor')
-        alert('Could not auto-parse the CV — please fill in your details manually.')
+        notify('error', 'Could not auto-parse — please fill in your details manually.')
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Upload failed')
+      notify('error', err.response?.data?.message || 'Upload failed')
     } finally {
       setUploading(false)
       e.target.value = ''
     }
   }
+
+  // Hidden file input — shared across all views
+  const fileInput = (
+    <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleUpload} />
+  )
 
   if (view === 'loading') {
     return (
@@ -563,20 +576,20 @@ export default function CVManager() {
   if (view === 'template') {
     return (
       <div className="p-8">
+        {fileInput}
         <TemplatePicker
           onSelect={loadTemplate}
           onManual={() => { setCvData(BLANK_PROFILE); setView('editor') }}
         />
         <div className="mt-6 pt-6 border-t border-zinc-800">
-          <p className="text-xs text-zinc-500 mb-2">Or import from a PDF / DOCX file (text will be stored for reference):</p>
-          <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleUpload} />
+          <p className="text-xs text-zinc-500 mb-2">Or import from a PDF / DOCX — AI will extract and pre-fill your profile:</p>
           <button
             onClick={() => fileRef.current.click()}
             disabled={uploading}
             className="flex items-center gap-2 px-4 py-2 border border-zinc-700/60 hover:bg-zinc-800 text-zinc-300 rounded-xl text-sm font-medium transition disabled:opacity-60"
           >
             {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            {uploading ? 'Uploading…' : 'Upload CV file'}
+            {uploading ? 'Parsing CV…' : 'Upload PDF / DOCX'}
           </button>
         </div>
       </div>
@@ -585,6 +598,20 @@ export default function CVManager() {
 
   return (
     <div className="p-8">
+      {fileInput}
+
+      {/* Notification banner */}
+      {uploadMsg && (
+        <div className={`flex items-center gap-2 mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
+          uploadMsg.type === 'success'
+            ? 'bg-emerald-900/20 border border-emerald-700/40 text-emerald-300'
+            : 'bg-red-900/20 border border-red-700/40 text-red-300'
+        }`}>
+          {uploadMsg.type === 'success' ? <CheckCircle size={15} /> : <X size={15} />}
+          {uploadMsg.text}
+        </div>
+      )}
+
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold text-zinc-50">CV Manager</h1>
         <div className="flex border border-zinc-700/60 rounded-xl overflow-hidden">
@@ -598,12 +625,22 @@ export default function CVManager() {
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setView('template')}
-          className="ml-auto flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition"
-        >
-          <LayoutTemplate size={13} /> Change template
-        </button>
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={() => fileRef.current.click()}
+            disabled={uploading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-zinc-700/60 hover:border-blue-500/50 hover:bg-blue-950/30 text-zinc-300 hover:text-blue-300 transition disabled:opacity-50"
+          >
+            {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+            {uploading ? 'Parsing…' : 'Upload PDF'}
+          </button>
+          <button
+            onClick={() => setView('template')}
+            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition"
+          >
+            <LayoutTemplate size={13} /> Change template
+          </button>
+        </div>
       </div>
 
       {activeTab === 'profile'
