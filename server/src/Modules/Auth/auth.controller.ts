@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { Request, Response, NextFunction } from 'express'
 import { google } from 'googleapis'
 import { generateToken } from '../../Utils/auth.utils'
@@ -10,6 +11,22 @@ const getOAuth2Client = () =>
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_AUTH_REDIRECT_URI,
   )
+
+// ── One-time code store ───────────────────────────────────────────────────────
+// Keeps JWT off the redirect URL (and therefore out of nginx access logs).
+// Codes expire in 2 minutes and are deleted on first use.
+interface PendingSession { token: string; user: object; expiresAt: number }
+const pendingSessions = new Map<string, PendingSession>()
+
+const storeSession = (token: string, user: object): string => {
+  const code = crypto.randomBytes(24).toString('base64url')
+  pendingSessions.set(code, { token, user, expiresAt: Date.now() + 2 * 60_000 })
+  // Clean up expired entries lazily
+  for (const [k, v] of pendingSessions) {
+    if (v.expiresAt < Date.now()) pendingSessions.delete(k)
+  }
+  return code
+}
 
 export class AuthController {
   static googleAuthUrl(_req: Request, res: Response) {
@@ -24,7 +41,9 @@ export class AuthController {
 
   static async googleCallback(req: Request, res: Response, next: NextFunction) {
     try {
-      const { code } = req.query as { code: string }
+      const { code } = req.query as { code?: string }
+      if (!code) return res.redirect(`${getFrontendUrl()}/login?error=missing_code`)
+
       const oauth2Client = getOAuth2Client()
       const { tokens } = await oauth2Client.getToken(code)
       oauth2Client.setCredentials(tokens)
@@ -44,20 +63,35 @@ export class AuthController {
       }
 
       const token = generateToken(String(user._id))
-      const userInfo = { email, name, picture }
+      const sessionCode = storeSession(token, { email, name, picture })
 
-      res.redirect(
-        `${getFrontendUrl()}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userInfo))}`,
-      )
+      // Redirect with a short-lived one-time code — JWT never touches the URL or logs
+      res.redirect(`${getFrontendUrl()}/auth/callback?code=${sessionCode}`)
     } catch (e) {
       next(e)
     }
   }
 
+  /** SPA exchanges the one-time code for the real JWT. */
+  static exchangeCode(req: Request, res: Response) {
+    const { code } = req.body as { code?: string }
+    if (!code) return res.status(400).json({ message: 'code is required' })
+
+    const session = pendingSessions.get(code)
+    if (!session || session.expiresAt < Date.now()) {
+      pendingSessions.delete(code)
+      return res.status(401).json({ message: 'Invalid or expired code' })
+    }
+
+    pendingSessions.delete(code) // one-time use
+    res.set('Cache-Control', 'no-store')
+    res.json({ token: session.token, user: session.user })
+  }
+
   static async mobileAuth(req: Request, res: Response, next: NextFunction) {
     try {
-      const { idToken } = req.body
-      if (!idToken) return res.status(400).json({ error: 'idToken is required' })
+      const { idToken } = req.body as { idToken?: string }
+      if (!idToken) return res.status(400).json({ message: 'idToken is required' })
 
       const client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID)
       const ticket = await client.verifyIdToken({
@@ -66,10 +100,12 @@ export class AuthController {
       })
 
       const payload = ticket.getPayload()
-      const email = payload?.email?.toLowerCase() ?? ''
-      const name = payload?.name ?? email
-      const googleId = payload?.sub ?? ''
-      const picture = payload?.picture ?? ''
+      if (!payload?.email) return res.status(401).json({ message: 'Invalid token' })
+
+      const email = payload.email.toLowerCase()
+      const name = payload.name ?? email
+      const googleId = payload.sub ?? ''
+      const picture = payload.picture ?? ''
 
       let user = await Users.findOne({ email })
       if (!user) {

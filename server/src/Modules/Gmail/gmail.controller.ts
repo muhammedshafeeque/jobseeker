@@ -9,7 +9,8 @@ import {
   ParsedEmail,
 } from './gmail.parser'
 import { JobApplication } from '../JobApplications/jobApplication.schema'
-import { getIO } from '../../Config/socket'
+import { emitToUser } from '../../Config/socket'
+import crypto from 'crypto'
 import type { ApplicationStatus } from '../JobApplications/jobApplication.schema'
 import { getFrontendUrl } from '../../Utils/env.utils'
 
@@ -160,7 +161,7 @@ async function syncAccount(
       if (applyStatusUpdate(app, status, note, email.nextStep)) statusUpdates++
 
       await app.save()
-      getIO().emit('job:updated', app)
+      emitToUser(String(userId), 'job:updated', app)
       detected.push({ company: app.company, subject: email.subject, status: app.status, matched: true })
     } else if (email.inviteType !== 'rejection') {
       const company = email.companyGuess || email.fromName || 'Unknown Company'
@@ -183,7 +184,7 @@ async function syncAccount(
 
       apps.push(created)
       newApplications++
-      getIO().emit('job:created', created)
+      emitToUser(String(userId), 'job:created', created)
       detected.push({ company, subject: email.subject, status, matched: false })
     }
 
@@ -198,6 +199,30 @@ async function syncAccount(
   return { scanned: messageIds.size, invitesFound, statusUpdates, newApplications, detected }
 }
 
+const signState = (userId: string): string => {
+  const nonce = crypto.randomBytes(16).toString('hex')
+  const data = `${userId}.${nonce}`
+  const sig = crypto
+    .createHmac('sha256', process.env.JWT_SECRET!)
+    .update(data).digest('hex')
+  return Buffer.from(`${data}.${sig}`).toString('base64url')
+}
+
+const verifyState = (state: string): string => {
+  let decoded: string
+  try { decoded = Buffer.from(state, 'base64url').toString() } catch { throw new Error('bad state') }
+  const parts = decoded.split('.')
+  if (parts.length !== 3) throw new Error('bad state')
+  const [userId, nonce, sig] = parts
+  const expected = crypto
+    .createHmac('sha256', process.env.JWT_SECRET!)
+    .update(`${userId}.${nonce}`).digest('hex')
+  if (!crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'))) {
+    throw new Error('bad state')
+  }
+  return userId
+}
+
 export class GmailController {
   static authUrl(req: Request, res: Response) {
     const userId = (req as any).userId
@@ -206,17 +231,21 @@ export class GmailController {
       access_type: 'offline',
       scope: ['https://www.googleapis.com/auth/gmail.readonly'],
       prompt: 'consent',
-      state: Buffer.from(userId).toString('base64'),
+      state: signState(userId),
     })
     res.json({ url })
   }
 
   static async callback(req: Request, res: Response, next: NextFunction) {
     try {
-      const { code, state } = req.query as { code: string; state?: string }
-      if (!state) return res.redirect(`${getFrontendUrl()}/settings?gmail=error`)
+      const { code, state } = req.query as { code?: string; state?: string }
+      if (!code || !state) return res.redirect(`${getFrontendUrl()}/settings?gmail=error`)
 
-      const userId = Buffer.from(state, 'base64').toString()
+      let userId: string
+      try { userId = verifyState(state) } catch {
+        return res.redirect(`${getFrontendUrl()}/settings?gmail=error`)
+      }
+
       const oauth2Client = getOAuth2Client()
       const { tokens } = await oauth2Client.getToken(code)
       oauth2Client.setCredentials(tokens)

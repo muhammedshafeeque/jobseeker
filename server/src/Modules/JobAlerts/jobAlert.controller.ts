@@ -322,20 +322,23 @@ export class JobAlertController {
     try {
       const userId = (req as any).userId
       const { source, saved, read, page = '1', limit = '20' } = req.query as Record<string, string>
+      const pageNum = Math.max(1, Math.min(1000, parseInt(page) || 1))
+      const limitNum = Math.max(1, Math.min(100, parseInt(limit) || 20))
+      const ALLOWED_SOURCES = ['indeed', 'gmail', 'all']
       const filter: Record<string, any> = { userId, isDismissed: false }
-      if (source && source !== 'all') filter.source = source
+      if (source && ALLOWED_SOURCES.includes(source) && source !== 'all') filter.source = source
       if (saved === 'true') filter.isSaved = true
       if (read === 'false') filter.isRead = false
 
-      const skip = (parseInt(page) - 1) * parseInt(limit)
+      const skip = (pageNum - 1) * limitNum
       const [alerts, total] = await Promise.all([
-        JobAlert.find(filter).sort({ postedAt: -1, createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        JobAlert.find(filter).sort({ postedAt: -1, createdAt: -1 }).skip(skip).limit(limitNum),
         JobAlert.countDocuments(filter),
       ])
       const unreadCount = await JobAlert.countDocuments({ userId, isDismissed: false, isRead: false })
       const savedCount = await JobAlert.countDocuments({ userId, isDismissed: false, isSaved: true })
 
-      res.json({ alerts, total, unreadCount, savedCount, page: parseInt(page), limit: parseInt(limit) })
+      res.json({ alerts, total, unreadCount, savedCount, page: pageNum, limit: limitNum })
     } catch (e) {
       next(e)
     }

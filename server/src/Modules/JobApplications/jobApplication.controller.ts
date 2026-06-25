@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { Types } from 'mongoose'
 import { JobApplication, ApplicationStatus } from './jobApplication.schema'
-import { getIO } from '../../Config/socket'
+import { emitToUser } from '../../Config/socket'
 
 export class JobApplicationController {
   static async create(req: Request, res: Response, next: NextFunction) {
@@ -14,7 +14,7 @@ export class JobApplicationController {
         status: 'draft',
         statusHistory: [{ status: 'draft', note: 'Created' }],
       })
-      getIO().emit('job:created', app)
+      emitToUser(userId, 'job:created', app)
       res.status(201).json(app)
     } catch (e) {
       next(e)
@@ -53,7 +53,7 @@ export class JobApplicationController {
         { new: true },
       )
       if (!app) return res.status(404).json({ message: 'Not found' })
-      getIO().emit('job:updated', app)
+      emitToUser(userId, 'job:updated', app)
       res.json(app)
     } catch (e) {
       next(e)
@@ -70,7 +70,7 @@ export class JobApplicationController {
       app.statusHistory.push({ status, note, changedAt: new Date() } as any)
       if (status === 'applied' && !app.appliedAt) app.appliedAt = new Date()
       await app.save()
-      getIO().emit('job:updated', app)
+      emitToUser(userId, 'job:updated', app)
       res.json(app)
     } catch (e) {
       next(e)
@@ -81,7 +81,7 @@ export class JobApplicationController {
     try {
       const userId = (req as any).userId
       await JobApplication.findOneAndDelete({ _id: req.params.id, userId })
-      getIO().emit('job:deleted', { id: req.params.id })
+      emitToUser(userId, 'job:deleted', { id: req.params.id })
       res.json({ message: 'Deleted' })
     } catch (e) {
       next(e)
