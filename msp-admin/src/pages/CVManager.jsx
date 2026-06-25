@@ -368,6 +368,21 @@ function ProfileEditor({ initial, onSaved }) {
 
 // ── Tailor Section ────────────────────────────────────────────────────────────
 
+const getFilename = (response, fallback) => {
+  const disposition = response.headers?.['content-disposition'] ?? ''
+  const match = disposition.match(/filename="([^"]+)"/)
+  return match?.[1] ?? fallback
+}
+
+const triggerDownload = (blob, filename) => {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 function TailorSection() {
   const [jd, setJd] = useState('')
   const [tailored, setTailored] = useState(null)
@@ -392,13 +407,8 @@ function TailorSection() {
     if (!tailored) return
     setDownloading(true)
     try {
-      const { data } = await api.post('/cv/pdf', { resume: tailored }, { responseType: 'blob' })
-      const url = URL.createObjectURL(data)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'Tailored_Resume.pdf'
-      a.click()
-      URL.revokeObjectURL(url)
+      const response = await api.post('/cv/pdf', { resume: tailored }, { responseType: 'blob' })
+      triggerDownload(response.data, getFilename(response, 'Tailored_Resume.pdf'))
     } catch {
       alert('PDF download failed')
     } finally {
@@ -409,13 +419,8 @@ function TailorSection() {
   const downloadMaster = async () => {
     setDownloading(true)
     try {
-      const { data } = await api.get('/cv/resume.pdf', { responseType: 'blob' })
-      const url = URL.createObjectURL(data)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'Resume.pdf'
-      a.click()
-      URL.revokeObjectURL(url)
+      const response = await api.get('/cv/resume.pdf', { responseType: 'blob' })
+      triggerDownload(response.data, getFilename(response, 'Resume.pdf'))
     } catch (err) {
       alert(err.response?.data?.message || 'PDF download failed. Save your CV profile first.')
     } finally {
