@@ -78,16 +78,17 @@ export default function Settings() {
     window.location.href = data.url
   }
 
-  const disconnectGmail = async () => {
-    if (!confirm('Disconnect Gmail?')) return
-    await api.delete('/gmail/disconnect')
-    setGmail({ connected: false, email: null })
+  const disconnectGmail = async (email) => {
+    if (!confirm(`Disconnect ${email}?`)) return
+    await api.delete('/gmail/disconnect', { data: { email } })
+    loadGmail()
   }
 
-  const syncNow = async () => {
+  const syncNow = async (email) => {
     setSyncing(true)
     try {
-      const { data } = await api.post('/gmail/sync')
+      const params = email ? { email } : {}
+      const { data } = await api.post('/gmail/sync', null, { params })
       alert(`Inbox scanned. ${data.invitesFound ?? 0} invite(s), ${data.statusUpdates ?? 0} status update(s), ${data.newApplications ?? 0} new application(s).`)
     } catch (e) {
       alert(e.response?.data?.message || 'Sync failed')
@@ -217,38 +218,66 @@ export default function Settings() {
 
         {gmail === null ? (
           <p className="text-sm text-zinc-500">Loading…</p>
-        ) : gmail.connected ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 p-3 bg-emerald-900/20 rounded-xl">
-              <CheckCircle size={16} className="text-emerald-400" />
-              <span className="text-sm font-medium text-emerald-200">Connected as {gmail.email}</span>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={syncNow} disabled={syncing} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium disabled:opacity-60">
-                {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                {syncing ? 'Syncing…' : 'Sync Now'}
-              </button>
-              <button onClick={disconnectGmail} className="flex items-center gap-2 px-4 py-2 border border-red-800/60 text-red-400 hover:bg-red-900/20 rounded-xl text-sm font-medium">
-                <Trash2 size={14} /> Disconnect
-              </button>
-            </div>
-          </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 p-3 bg-amber-900/20 rounded-xl">
-              <AlertCircle size={16} className="text-amber-400" />
-              <span className="text-sm text-amber-300">Not connected</span>
-            </div>
+          <div className="space-y-3">
+            {(gmail.accounts ?? []).length > 0 ? (
+              <>
+                {gmail.accounts.map(account => (
+                  <div key={account.email} className="flex items-center gap-3 p-3 bg-emerald-900/10 border border-emerald-800/30 rounded-xl">
+                    <CheckCircle size={15} className="text-emerald-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-emerald-200 truncate">{account.email}</p>
+                      {account.lastSyncAt && (
+                        <p className="text-xs text-zinc-500">Last sync: {new Date(account.lastSyncAt).toLocaleString()}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        onClick={() => syncNow(account.email)}
+                        disabled={syncing}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium disabled:opacity-60"
+                      >
+                        {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                        Sync
+                      </button>
+                      <button
+                        onClick={() => disconnectGmail(account.email)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-red-800/60 text-red-400 hover:bg-red-900/20 rounded-lg text-xs font-medium"
+                      >
+                        <Trash2 size={12} /> Disconnect
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {gmail.accounts.length > 1 && (
+                  <button
+                    onClick={() => syncNow(null)}
+                    disabled={syncing}
+                    className="flex items-center gap-2 px-4 py-2 border border-zinc-700/60 hover:bg-zinc-800 text-zinc-300 rounded-xl text-sm font-medium transition disabled:opacity-60"
+                  >
+                    {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    Sync All Accounts
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-2 p-3 bg-amber-900/20 rounded-xl">
+                <AlertCircle size={16} className="text-amber-400" />
+                <span className="text-sm text-amber-300">No Gmail accounts connected</span>
+              </div>
+            )}
+
             <div className="text-sm text-zinc-300 bg-zinc-950 rounded-xl p-4 space-y-1">
-              <p className="font-medium">How it works:</p>
-              <ul className="list-disc pl-4 space-y-1 text-zinc-400">
-                <li>Connect the Gmail account you use for job applications</li>
+              <p className="font-medium text-xs text-zinc-400">How it works:</p>
+              <ul className="list-disc pl-4 space-y-1 text-zinc-500 text-xs">
+                <li>Connect any Gmail you use for job applications</li>
                 <li>Job alert emails from Naukri, Indeed & LinkedIn are auto-imported</li>
-                <li>Click "Sync Now" to detect company replies and advance job statuses</li>
+                <li>Sync detects company replies and advances your job statuses</li>
+                <li>You can connect multiple accounts</li>
               </ul>
             </div>
             <button onClick={connectGmail} className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium">
-              <Mail size={16} /> Connect Gmail
+              <Plus size={15} /> Connect{(gmail.accounts ?? []).length > 0 ? ' Another' : ''} Gmail
             </button>
           </div>
         )}

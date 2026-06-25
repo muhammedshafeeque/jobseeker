@@ -38,7 +38,16 @@ export const api = {
   put<T>(path: string, body?: unknown): Promise<T> {
     return request<T>(path, { method: 'PUT', body: body !== undefined ? JSON.stringify(body) : undefined })
   },
-  del<T>(path: string): Promise<T> {
-    return request<T>(path, { method: 'DELETE' })
+  del<T>(path: string, opts?: { data?: unknown }): Promise<T> {
+    return request<T>(path, {
+      method: 'DELETE',
+      body: opts?.data !== undefined ? JSON.stringify(opts.data) : undefined,
+    })
+  },
+  delete<T>(path: string, opts?: { data?: unknown }): Promise<T> {
+    return request<T>(path, {
+      method: 'DELETE',
+      body: opts?.data !== undefined ? JSON.stringify(opts.data) : undefined,
+    })
   },
 }

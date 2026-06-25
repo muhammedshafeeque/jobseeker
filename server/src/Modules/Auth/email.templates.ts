@@ -1,9 +1,10 @@
 import dotenv from 'dotenv'
+import { getFrontendUrl } from '../../Utils/env.utils'
 
 dotenv.config()
 
 const brandName = process.env.MAIL_FROM_NAME ?? 'Byzand'
-const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173'
+const frontendUrl = getFrontendUrl()
 
 type EmailLayoutOptions = {
   title: string

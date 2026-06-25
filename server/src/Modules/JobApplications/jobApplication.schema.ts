@@ -26,6 +26,7 @@ const statusHistorySchema = new Schema(
 
 const jobApplicationSchema = new Schema(
   {
+    userId: { type: Schema.Types.ObjectId, ref: COLLECTIONS.USER, required: true, index: true },
     company: { type: String, required: true },
     role: { type: String, required: true },
     jd: { type: String, required: true },

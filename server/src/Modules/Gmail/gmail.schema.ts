@@ -3,7 +3,8 @@ import { COLLECTIONS } from '../../Constant/collections'
 
 const gmailTokenSchema = new Schema(
   {
-    email: { type: String, required: true, unique: true },
+    userId: { type: Schema.Types.ObjectId, ref: COLLECTIONS.USER, required: true, index: true },
+    email: { type: String, required: true },
     accessToken: { type: String, required: true },
     refreshToken: { type: String },
     expiryDate: { type: Number },
@@ -12,5 +13,7 @@ const gmailTokenSchema = new Schema(
   },
   { timestamps: true },
 )
+
+gmailTokenSchema.index({ userId: 1, email: 1 }, { unique: true })
 
 export const GmailToken = model(COLLECTIONS.GMAIL_TOKEN, gmailTokenSchema)

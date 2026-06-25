@@ -7,6 +7,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 const router = Router()
 
 router.use(requireAuth)
+router.post('/profile', CVController.saveProfile)
 router.post('/upload', upload.single('cv'), CVController.upload)
 router.get('/', CVController.get)
 router.get('/resume.pdf', CVController.resumePdf)

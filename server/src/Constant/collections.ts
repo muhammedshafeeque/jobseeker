@@ -1,6 +1,7 @@
 export const COLLECTIONS = {
   USER: 'user',
   CV: 'cv',
+  CV_TEMPLATE: 'cv_template',
   JOB_APPLICATION: 'job_application',
   CONTACT: 'contact',
   GMAIL_TOKEN: 'gmail_token',

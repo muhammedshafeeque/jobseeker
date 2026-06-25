@@ -7,6 +7,8 @@ import { connectDB } from './src/Config/db'
 import { initSocket } from './src/Config/socket'
 import router from './src/Routes'
 import { errorHandler } from './src/Middleware/common.middleware'
+import { CVTemplate } from './src/Modules/CVTemplates/cvTemplate.schema'
+import { SEED_TEMPLATES } from './src/Modules/CVTemplates/cvTemplate.seed'
 
 dotenv.config()
 
@@ -14,7 +16,15 @@ const app = express()
 const httpServer = http.createServer(app)
 const port = Number(process.env.PORT) || 6000
 
-connectDB()
+async function seedTemplates() {
+  const count = await CVTemplate.countDocuments()
+  if (count === 0) {
+    await CVTemplate.insertMany(SEED_TEMPLATES)
+    console.log(`Seeded ${SEED_TEMPLATES.length} CV templates`)
+  }
+}
+
+connectDB().then(() => seedTemplates())
 initSocket(httpServer)
 
 const allowedOrigins = (process.env.FRONTEND_URL || '')

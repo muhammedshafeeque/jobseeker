@@ -1,4 +1,3 @@
-import * as bcrypt from 'bcrypt'
 import { NextFunction } from 'express'
 import { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
@@ -6,14 +5,6 @@ import { z } from 'zod'
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 dotenv.config()
-
-export const hashPassword = async (password: string) => {
-    return await bcrypt.hash(password, 10)
-}
-
-export const comparePassword = async (password: string, hashedPassword: string) => {
-    return await bcrypt.compare(password, hashedPassword)
-}
 
 export const validateBody = (schema: z.ZodSchema) => {
     return (req: Request, res: Response, next: NextFunction) => {

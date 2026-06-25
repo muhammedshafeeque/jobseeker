@@ -8,7 +8,7 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction) => 
   }
   try {
     const payload = verifyToken(header.slice(7)) as { id: string }
-    ;(req as any).userEmail = payload.id
+    ;(req as any).userId = payload.id
     next()
   } catch {
     res.status(401).json({ message: 'Invalid or expired token' })

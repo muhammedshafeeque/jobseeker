@@ -115,8 +115,8 @@ function getOAuth2Client() {
   )
 }
 
-async function syncGmailAlerts(): Promise<number> {
-  const tokenDoc = await GmailToken.findOne()
+async function syncGmailAlerts(userId: string): Promise<number> {
+  const tokenDoc = await GmailToken.findOne({ userId })
   if (!tokenDoc) return 0
 
   const auth = getOAuth2Client()
@@ -198,11 +198,12 @@ async function syncGmailAlerts(): Promise<number> {
     if (digestJobs.length > 0) {
       for (const job of digestJobs) {
         const externalId = `${source}-gmail:${msg.id}:${job.externalKey.slice(0, 120)}`
-        const exists = await JobAlert.findOne({ externalId })
+        const exists = await JobAlert.findOne({ userId, externalId })
         if (exists) continue
 
         const jobExp = extractExperience(job.snippet ?? text)
         await JobAlert.create({
+          userId,
           title: job.title,
           company: job.company,
           location: job.location,
@@ -231,6 +232,7 @@ async function syncGmailAlerts(): Promise<number> {
     const exp = extractExperience(text || stripHtml(html))
 
     await JobAlert.create({
+      userId,
       title: subject,
       source,
       snippet: text.slice(0, 600) || stripHtml(html).slice(0, 600),
@@ -250,8 +252,8 @@ async function syncGmailAlerts(): Promise<number> {
   return added
 }
 
-async function reparseExistingAlerts(): Promise<number> {
-  const alerts = await JobAlert.find({ htmlBody: { $exists: true, $ne: '' } })
+async function reparseExistingAlerts(userId: string): Promise<number> {
+  const alerts = await JobAlert.find({ userId, htmlBody: { $exists: true, $ne: '' } })
   let updated = 0
 
   for (const alert of alerts) {
@@ -280,7 +282,8 @@ async function reparseExistingAlerts(): Promise<number> {
 export class JobAlertController {
   static async getPreferences(req: Request, res: Response, next: NextFunction) {
     try {
-      const prefs = (await UserPreferences.findOne()) ?? {}
+      const userId = (req as any).userId
+      const prefs = (await UserPreferences.findOne({ userId })) ?? {}
       res.json(prefs)
     } catch (e) {
       next(e)
@@ -289,9 +292,10 @@ export class JobAlertController {
 
   static async updatePreferences(req: Request, res: Response, next: NextFunction) {
     try {
+      const userId = (req as any).userId
       const prefs = await UserPreferences.findOneAndUpdate(
-        {},
-        req.body,
+        { userId },
+        { ...req.body, userId },
         { upsert: true, new: true },
       )
       res.json(prefs)
@@ -302,8 +306,9 @@ export class JobAlertController {
 
   static async list(req: Request, res: Response, next: NextFunction) {
     try {
+      const userId = (req as any).userId
       const { source, saved, read, page = '1', limit = '20' } = req.query as Record<string, string>
-      const filter: Record<string, any> = { isDismissed: false }
+      const filter: Record<string, any> = { userId, isDismissed: false }
       if (source && source !== 'all') filter.source = source
       if (saved === 'true') filter.isSaved = true
       if (read === 'false') filter.isRead = false
@@ -313,8 +318,8 @@ export class JobAlertController {
         JobAlert.find(filter).sort({ postedAt: -1, createdAt: -1 }).skip(skip).limit(parseInt(limit)),
         JobAlert.countDocuments(filter),
       ])
-      const unreadCount = await JobAlert.countDocuments({ isDismissed: false, isRead: false })
-      const savedCount = await JobAlert.countDocuments({ isDismissed: false, isSaved: true })
+      const unreadCount = await JobAlert.countDocuments({ userId, isDismissed: false, isRead: false })
+      const savedCount = await JobAlert.countDocuments({ userId, isDismissed: false, isSaved: true })
 
       res.json({ alerts, total, unreadCount, savedCount, page: parseInt(page), limit: parseInt(limit) })
     } catch (e) {
@@ -324,7 +329,8 @@ export class JobAlertController {
 
   static async sync(req: Request, res: Response, next: NextFunction) {
     try {
-      const prefs = await UserPreferences.findOne()
+      const userId = (req as any).userId
+      const prefs = await UserPreferences.findOne({ userId })
       let indeedAdded = 0
       let gmailAdded = 0
 
@@ -337,7 +343,7 @@ export class JobAlertController {
             for (const item of items) {
               const link = typeof item.link === 'string' ? item.link : String(item.link ?? '')
               if (!link) continue
-              const existing = await JobAlert.findOne({ externalId: `indeed:${link}` })
+              const existing = await JobAlert.findOne({ userId, externalId: `indeed:${link}` })
               if (existing) continue
 
               const rawTitle = typeof item.title === 'string' ? item.title : ''
@@ -349,6 +355,7 @@ export class JobAlertController {
               const exp = extractExperience(bodyText)
 
               await JobAlert.create({
+                userId,
                 title: roleRaw?.trim() ?? rawTitle,
                 company: companyRaw?.trim(),
                 location: loc,
@@ -371,8 +378,8 @@ export class JobAlertController {
       }
 
       // Gmail job alert emails
-      gmailAdded = await syncGmailAlerts()
-      const reparsed = await reparseExistingAlerts()
+      gmailAdded = await syncGmailAlerts(userId)
+      const reparsed = await reparseExistingAlerts(userId)
 
       res.json({ added: indeedAdded + gmailAdded, reparsed, sources: { indeed: indeedAdded, gmail: gmailAdded } })
     } catch (e) {
@@ -382,7 +389,8 @@ export class JobAlertController {
 
   static async getOne(req: Request, res: Response, next: NextFunction) {
     try {
-      const alert = await JobAlert.findById(req.params.id)
+      const userId = (req as any).userId
+      const alert = await JobAlert.findOne({ _id: req.params.id, userId })
       if (!alert) return res.status(404).json({ message: 'Not found' })
       res.json(alert)
     } catch (e) {
@@ -392,10 +400,11 @@ export class JobAlertController {
 
   static async opportunities(req: Request, res: Response, next: NextFunction) {
     try {
-      const prefs = await UserPreferences.findOne()
+      const userId = (req as any).userId
+      const prefs = await UserPreferences.findOne({ userId })
       const { status } = req.query as { status?: string }
 
-      const filter: Record<string, any> = { isDismissed: false }
+      const filter: Record<string, any> = { userId, isDismissed: false }
       if (status === 'applied') filter.appliedJobId = { $exists: true, $ne: null }
       if (status === 'not_applied') filter.appliedJobId = { $exists: false }
 
@@ -478,8 +487,9 @@ export class JobAlertController {
 
   static async markRead(req: Request, res: Response, next: NextFunction) {
     try {
-      const alert = await JobAlert.findByIdAndUpdate(
-        req.params.id,
+      const userId = (req as any).userId
+      const alert = await JobAlert.findOneAndUpdate(
+        { _id: req.params.id, userId },
         { isRead: true },
         { new: true },
       )
@@ -492,7 +502,8 @@ export class JobAlertController {
 
   static async toggleSave(req: Request, res: Response, next: NextFunction) {
     try {
-      const alert = await JobAlert.findById(req.params.id)
+      const userId = (req as any).userId
+      const alert = await JobAlert.findOne({ _id: req.params.id, userId })
       if (!alert) return res.status(404).json({ message: 'Not found' })
       alert.isSaved = !alert.isSaved
       await alert.save()
@@ -504,7 +515,8 @@ export class JobAlertController {
 
   static async dismiss(req: Request, res: Response, next: NextFunction) {
     try {
-      await JobAlert.findByIdAndUpdate(req.params.id, { isDismissed: true })
+      const userId = (req as any).userId
+      await JobAlert.findOneAndUpdate({ _id: req.params.id, userId }, { isDismissed: true })
       res.json({ message: 'Dismissed' })
     } catch (e) {
       next(e)
@@ -513,10 +525,12 @@ export class JobAlertController {
 
   static async convertToApplication(req: Request, res: Response, next: NextFunction) {
     try {
-      const alert = await JobAlert.findById(req.params.id)
+      const userId = (req as any).userId
+      const alert = await JobAlert.findOne({ _id: req.params.id, userId })
       if (!alert) return res.status(404).json({ message: 'Not found' })
 
       const app = await JobApplication.create({
+        userId,
         company: alert.company ?? 'Unknown',
         role: alert.title,
         jd: alert.snippet ?? '',
@@ -538,7 +552,8 @@ export class JobAlertController {
 
   static async remove(req: Request, res: Response, next: NextFunction) {
     try {
-      await JobAlert.findByIdAndDelete(req.params.id)
+      const userId = (req as any).userId
+      await JobAlert.findOneAndDelete({ _id: req.params.id, userId })
       res.json({ message: 'Deleted' })
     } catch (e) {
       next(e)

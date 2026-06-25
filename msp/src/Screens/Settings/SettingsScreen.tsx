@@ -19,10 +19,14 @@ interface JobPreferences {
   maxCtcLpa?: number
 }
 
+interface GmailAccount {
+  email: string
+  lastSyncAt?: string
+}
+
 interface GmailStatus {
   connected: boolean
-  email?: string
-  lastSync?: string
+  accounts: GmailAccount[]
 }
 
 export default function SettingsScreen() {
@@ -65,7 +69,7 @@ export default function SettingsScreen() {
       const data = await api.get<GmailStatus>('/gmail/status')
       setGmailStatus(data)
     } catch {
-      setGmailStatus({ connected: false })
+      setGmailStatus({ connected: false, accounts: [] })
     }
   }, [])
 
@@ -108,16 +112,16 @@ export default function SettingsScreen() {
     }
   }
 
-  const disconnectGmail = async () => {
-    Alert.alert('Disconnect Gmail', 'Are you sure you want to disconnect your Gmail integration?', [
+  const disconnectGmail = async (email: string) => {
+    Alert.alert('Disconnect Gmail', `Disconnect ${email}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Disconnect', style: 'destructive',
         onPress: async () => {
           setDisconnecting(true)
           try {
-            await api.post('/gmail/disconnect')
-            setGmailStatus({ connected: false })
+            await api.delete('/gmail/disconnect', { data: { email } })
+            loadGmailStatus()
           } catch (e: any) {
             Alert.alert('Error', e?.message ?? 'Failed to disconnect')
           } finally {
@@ -223,45 +227,51 @@ export default function SettingsScreen() {
         <View style={s.card}>
           {gmailStatus === null ? (
             <ActivityIndicator color={Colors.primary} />
-          ) : gmailStatus.connected ? (
+          ) : gmailStatus.connected && (gmailStatus.accounts ?? []).length > 0 ? (
             <>
-              <View style={s.gmailRow}>
-                <View style={[s.gmailBadge, { backgroundColor: Colors.applicationSentBg }]}>
-                  <Icon name="checkmark-circle" size={14} color={Colors.success} />
-                  <Text style={[s.gmailBadgeText, { color: Colors.success }]}>Connected</Text>
-                </View>
-                {gmailStatus.email && (
-                  <Text style={s.gmailEmail} numberOfLines={1}>{gmailStatus.email}</Text>
-                )}
-              </View>
-              {gmailStatus.lastSync && (
-                <Text style={s.lastSync}>Last sync: {new Date(gmailStatus.lastSync).toLocaleString('en-IN')}</Text>
-              )}
-              <View style={s.gmailActions}>
-                <TouchableOpacity
-                  style={[s.syncBtn, syncing && { opacity: 0.6 }]}
-                  onPress={syncGmail}
-                  disabled={syncing}
-                  activeOpacity={0.8}
-                >
-                  {syncing ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Icon name="sync-outline" size={14} color="#fff" />
-                      <Text style={s.syncBtnText}>Sync Now</Text>
-                    </>
+              {(gmailStatus.accounts ?? []).map(account => (
+                <View key={account.email} style={s.accountRow}>
+                  <View style={[s.gmailBadge, { backgroundColor: Colors.applicationSentBg }]}>
+                    <Icon name="checkmark-circle" size={14} color={Colors.success} />
+                    <Text style={[s.gmailBadgeText, { color: Colors.success }]} numberOfLines={1}>
+                      {account.email}
+                    </Text>
+                  </View>
+                  {account.lastSyncAt && (
+                    <Text style={s.lastSync}>
+                      Last sync: {new Date(account.lastSyncAt).toLocaleString('en-IN')}
+                    </Text>
                   )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[s.disconnectBtn, disconnecting && { opacity: 0.6 }]}
-                  onPress={disconnectGmail}
-                  disabled={disconnecting}
-                  activeOpacity={0.8}
-                >
-                  <Text style={s.disconnectBtnText}>Disconnect</Text>
-                </TouchableOpacity>
-              </View>
+                  <View style={s.gmailActions}>
+                    <TouchableOpacity
+                      style={[s.syncBtn, syncing && { opacity: 0.6 }]}
+                      onPress={syncGmail}
+                      disabled={syncing}
+                      activeOpacity={0.8}
+                    >
+                      {syncing ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Icon name="sync-outline" size={14} color="#fff" />
+                          <Text style={s.syncBtnText}>Sync</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.disconnectBtn, disconnecting && { opacity: 0.6 }]}
+                      onPress={() => disconnectGmail(account.email)}
+                      disabled={disconnecting}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={s.disconnectBtnText}>Disconnect</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              <Text style={s.gmailHint}>
+                Connect additional Gmail accounts from the web admin panel.
+              </Text>
             </>
           ) : (
             <>
@@ -272,7 +282,7 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <Text style={s.gmailHint}>
-                Connect Gmail from the web admin panel at localhost:5174
+                Connect Gmail from the web admin panel to sync your job application emails.
               </Text>
             </>
           )}
@@ -358,6 +368,7 @@ const s = StyleSheet.create({
   },
   saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   gmailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  accountRow: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border },
   gmailBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,

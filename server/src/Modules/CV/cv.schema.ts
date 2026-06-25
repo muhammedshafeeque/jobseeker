@@ -3,8 +3,10 @@ import { COLLECTIONS } from '../../Constant/collections'
 
 const cvSchema = new Schema(
   {
-    rawText: { type: String, required: true },
-    fileName: { type: String, required: true },
+    userId: { type: Schema.Types.ObjectId, ref: COLLECTIONS.USER, required: true, index: true },
+    rawText: { type: String },
+    fileName: { type: String },
+    profileData: { type: Schema.Types.Mixed },
     uploadedAt: { type: Date, default: Date.now },
   },
   { timestamps: true },

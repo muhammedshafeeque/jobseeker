@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express'
 import { google } from 'googleapis'
 import { generateToken } from '../../Utils/auth.utils'
+import { getFrontendUrl } from '../../Utils/env.utils'
+import { Users } from './auth.shema'
 
 const getOAuth2Client = () =>
   new google.auth.OAuth2(
@@ -8,12 +10,6 @@ const getOAuth2Client = () =>
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_AUTH_REDIRECT_URI,
   )
-
-const allowedEmails = (): string[] =>
-  (process.env.ALLOWED_EMAILS ?? '')
-    .split(',')
-    .map(e => e.trim().toLowerCase())
-    .filter(Boolean)
 
 export class AuthController {
   static googleAuthUrl(_req: Request, res: Response) {
@@ -36,18 +32,22 @@ export class AuthController {
       const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client })
       const { data } = await oauth2.userinfo.get()
       const email = data.email?.toLowerCase() ?? ''
+      const name = data.name ?? email
+      const googleId = data.id ?? ''
+      const picture = data.picture ?? ''
 
-      if (!allowedEmails().includes(email)) {
-        return res.redirect(
-          `${process.env.FRONTEND_URL}/login?error=unauthorized`,
-        )
+      let user = await Users.findOne({ email })
+      if (!user) {
+        user = await Users.create({ name, email, googleId, picture })
+      } else {
+        await Users.updateOne({ _id: user._id }, { googleId, picture })
       }
 
-      const token = generateToken(email)
-      const user = { email, name: data.name ?? email, picture: data.picture ?? '' }
+      const token = generateToken(String(user._id))
+      const userInfo = { email, name, picture }
 
       res.redirect(
-        `${process.env.FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`,
+        `${getFrontendUrl()}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userInfo))}`,
       )
     } catch (e) {
       next(e)
@@ -57,9 +57,7 @@ export class AuthController {
   static async mobileAuth(req: Request, res: Response, next: NextFunction) {
     try {
       const { idToken } = req.body
-      if (!idToken) {
-        return res.status(400).json({ error: 'idToken is required' })
-      }
+      if (!idToken) return res.status(400).json({ error: 'idToken is required' })
 
       const client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID)
       const ticket = await client.verifyIdToken({
@@ -69,20 +67,19 @@ export class AuthController {
 
       const payload = ticket.getPayload()
       const email = payload?.email?.toLowerCase() ?? ''
+      const name = payload?.name ?? email
+      const googleId = payload?.sub ?? ''
+      const picture = payload?.picture ?? ''
 
-      if (!allowedEmails().includes(email)) {
-        return res.status(403).json({ error: 'This Google account is not authorized' })
+      let user = await Users.findOne({ email })
+      if (!user) {
+        user = await Users.create({ name, email, googleId, picture })
+      } else {
+        await Users.updateOne({ _id: user._id }, { googleId, picture })
       }
 
-      const token = generateToken(email)
-      return res.json({
-        token,
-        user: {
-          email,
-          name: payload?.name ?? email,
-          picture: payload?.picture ?? '',
-        },
-      })
+      const token = generateToken(String(user._id))
+      return res.json({ token, user: { email, name, picture } })
     } catch (e) {
       next(e)
     }

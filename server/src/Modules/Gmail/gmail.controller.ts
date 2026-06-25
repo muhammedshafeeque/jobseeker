@@ -11,6 +11,7 @@ import {
 import { JobApplication } from '../JobApplications/jobApplication.schema'
 import { getIO } from '../../Config/socket'
 import type { ApplicationStatus } from '../JobApplications/jobApplication.schema'
+import { getFrontendUrl } from '../../Utils/env.utils'
 
 const getOAuth2Client = () =>
   new google.auth.OAuth2(
@@ -108,20 +109,114 @@ function applyStatusUpdate(
   return true
 }
 
+async function syncAccount(
+  tokenDoc: InstanceType<typeof GmailToken>,
+  userId: string,
+): Promise<{ scanned: number; invitesFound: number; statusUpdates: number; newApplications: number; detected: any[] }> {
+  const { gmail } = await bindGmailClient(tokenDoc)
+  const processed = new Set(tokenDoc.processedMessageIds ?? [])
+  const apps = await JobApplication.find({
+    userId,
+    status: { $nin: ['withdrawn', 'accepted'] },
+  })
+
+  const messageIds = new Set<string>()
+  const inboxIds = await listInboxMessages(gmail, INBOX_QUERY, 60)
+  inboxIds.forEach(id => messageIds.add(id))
+
+  for (const app of apps) {
+    const company = app.company.replace(/"/g, '')
+    const role = app.role.replace(/"/g, '')
+    const query = `newer_than:60d (from:${company.split(/\s+/)[0]} OR subject:"${role}" OR subject:"${company}")`
+    const related = await listInboxMessages(gmail, query, 15)
+    related.forEach(id => messageIds.add(id))
+  }
+
+  let statusUpdates = 0
+  let invitesFound = 0
+  let newApplications = 0
+  const detected: Array<{ company: string; subject: string; status: string; matched: boolean }> = []
+
+  for (const messageId of messageIds) {
+    if (processed.has(messageId)) continue
+
+    const email = await fetchMessage(gmail, messageId)
+    if (!email || !isJobRelated(email)) {
+      processed.add(messageId)
+      continue
+    }
+
+    invitesFound++
+    const matched = matchJob(apps, email)
+    const note = `Gmail: ${email.inviteType} — ${email.subject}`
+
+    if (matched) {
+      const app = apps.find(a => String(a._id) === String(matched._id))!
+      if (!app.gmailThreadIds.includes(email.threadId)) {
+        app.gmailThreadIds.push(email.threadId)
+      }
+
+      const status = email.suggestedStatus!
+      if (applyStatusUpdate(app, status, note, email.nextStep)) statusUpdates++
+
+      await app.save()
+      getIO().emit('job:updated', app)
+      detected.push({ company: app.company, subject: email.subject, status: app.status, matched: true })
+    } else if (email.inviteType !== 'rejection') {
+      const company = email.companyGuess || email.fromName || 'Unknown Company'
+      const role = email.roleGuess || 'Role from email'
+      const status: ApplicationStatus =
+        email.inviteType === 'application_update' ? 'applied' : 'responded'
+
+      const created = await JobApplication.create({
+        userId,
+        company,
+        role,
+        jd: `Auto-detected from Gmail inbox.\n\nSubject: ${email.subject}\nFrom: ${email.from}\nDate: ${email.receivedAt.toISOString()}\n\n${email.snippet}`,
+        status,
+        statusHistory: [{ status, note, changedAt: new Date() }],
+        gmailThreadIds: [email.threadId],
+        notes: email.subject,
+        nextStep: email.nextStep,
+        appliedAt: status === 'applied' ? email.receivedAt : undefined,
+      })
+
+      apps.push(created)
+      newApplications++
+      getIO().emit('job:created', created)
+      detected.push({ company, subject: email.subject, status, matched: false })
+    }
+
+    processed.add(messageId)
+  }
+
+  await GmailToken.findOneAndUpdate(
+    { _id: tokenDoc._id },
+    { processedMessageIds: [...processed].slice(-5000), lastSyncAt: new Date() },
+  )
+
+  return { scanned: messageIds.size, invitesFound, statusUpdates, newApplications, detected }
+}
+
 export class GmailController {
-  static authUrl(_req: Request, res: Response) {
+  static authUrl(req: Request, res: Response) {
+    const userId = (req as any).userId
     const oauth2Client = getOAuth2Client()
     const url = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: ['https://www.googleapis.com/auth/gmail.readonly'],
       prompt: 'consent',
+      state: Buffer.from(userId).toString('base64'),
     })
     res.json({ url })
   }
 
   static async callback(req: Request, res: Response, next: NextFunction) {
     try {
-      const { code } = req.query as { code: string }
+      const { code, state } = req.query as { code: string; state?: string }
+      if (!state) return res.redirect(`${getFrontendUrl()}/settings?gmail=error`)
+
+      const userId = Buffer.from(state, 'base64').toString()
       const oauth2Client = getOAuth2Client()
       const { tokens } = await oauth2Client.getToken(code)
       oauth2Client.setCredentials(tokens)
@@ -131,8 +226,9 @@ export class GmailController {
       const email = profile.data.emailAddress!
 
       await GmailToken.findOneAndUpdate(
-        { email },
+        { userId, email },
         {
+          userId,
           email,
           accessToken: tokens.access_token!,
           refreshToken: tokens.refresh_token,
@@ -141,134 +237,67 @@ export class GmailController {
         { upsert: true, new: true },
       )
 
-      res.redirect(`${process.env.FRONTEND_URL}/settings?gmail=connected&email=${email}`)
+      res.redirect(`${getFrontendUrl()}/settings?gmail=connected&email=${email}`)
     } catch (e) {
       next(e)
     }
   }
 
-  static async status(_req: Request, res: Response, next: NextFunction) {
+  static async status(req: Request, res: Response, next: NextFunction) {
     try {
-      const token = await GmailToken.findOne()
+      const userId = (req as any).userId
+      const tokens = await GmailToken.find({ userId }, { accessToken: 0, refreshToken: 0, processedMessageIds: 0 })
       res.json({
-        connected: !!token,
-        email: token?.email ?? null,
-        lastSyncAt: token?.lastSyncAt ?? null,
+        connected: tokens.length > 0,
+        accounts: tokens.map(t => ({
+          email: t.email,
+          lastSyncAt: t.lastSyncAt ?? null,
+        })),
       })
     } catch (e) {
       next(e)
     }
   }
 
-  static async disconnect(_req: Request, res: Response, next: NextFunction) {
+  static async disconnect(req: Request, res: Response, next: NextFunction) {
     try {
-      await GmailToken.deleteMany({})
-      res.json({ message: 'Gmail disconnected' })
+      const userId = (req as any).userId
+      const { email } = req.body
+      if (email) {
+        await GmailToken.deleteOne({ userId, email })
+        res.json({ message: `${email} disconnected` })
+      } else {
+        await GmailToken.deleteMany({ userId })
+        res.json({ message: 'All Gmail accounts disconnected' })
+      }
     } catch (e) {
       next(e)
     }
   }
 
-  static async sync(_req: Request, res: Response, next: NextFunction) {
+  static async sync(req: Request, res: Response, next: NextFunction) {
     try {
-      const tokenDoc = await GmailToken.findOne()
-      if (!tokenDoc) throw { status: 400, message: 'Gmail not connected' }
+      const userId = (req as any).userId
+      const { email } = req.query as { email?: string }
 
-      const { gmail } = await bindGmailClient(tokenDoc)
-      const processed = new Set(tokenDoc.processedMessageIds ?? [])
-      const apps = await JobApplication.find({
-        status: { $nin: ['withdrawn', 'accepted'] },
-      })
+      const filter = email ? { userId, email } : { userId }
+      const tokenDocs = await GmailToken.find(filter)
+      if (!tokenDocs.length) throw { status: 400, message: 'No Gmail accounts connected' }
 
-      const messageIds = new Set<string>()
-      const inboxIds = await listInboxMessages(gmail, INBOX_QUERY, 60)
-      inboxIds.forEach(id => messageIds.add(id))
+      const results = await Promise.all(tokenDocs.map(doc => syncAccount(doc, userId)))
 
-      for (const app of apps) {
-        const company = app.company.replace(/"/g, '')
-        const role = app.role.replace(/"/g, '')
-        const query = `newer_than:60d (from:${company.split(/\s+/)[0]} OR subject:"${role}" OR subject:"${company}")`
-        const related = await listInboxMessages(gmail, query, 15)
-        related.forEach(id => messageIds.add(id))
-      }
-
-      let statusUpdates = 0
-      let invitesFound = 0
-      let newApplications = 0
-      const detected: Array<{ company: string; subject: string; status: string; matched: boolean }> = []
-
-      for (const messageId of messageIds) {
-        if (processed.has(messageId)) continue
-
-        const email = await fetchMessage(gmail, messageId)
-        if (!email || !isJobRelated(email)) {
-          processed.add(messageId)
-          continue
-        }
-
-        invitesFound++
-        const matched = matchJob(apps, email)
-        const note = `Gmail: ${email.inviteType} — ${email.subject}`
-
-        if (matched) {
-          const app = apps.find(a => String(a._id) === String(matched._id))!
-          if (!app.gmailThreadIds.includes(email.threadId)) {
-            app.gmailThreadIds.push(email.threadId)
-          }
-
-          const status = email.suggestedStatus!
-          if (applyStatusUpdate(app, status, note, email.nextStep)) statusUpdates++
-
-          await app.save()
-          getIO().emit('job:updated', app)
-          detected.push({
-            company: app.company,
-            subject: email.subject,
-            status: app.status,
-            matched: true,
-          })
-        } else if (email.inviteType !== 'rejection') {
-          const company = email.companyGuess || email.fromName || 'Unknown Company'
-          const role = email.roleGuess || 'Role from email'
-          const status: ApplicationStatus =
-            email.inviteType === 'application_update' ? 'applied' : 'responded'
-
-          const created = await JobApplication.create({
-            company,
-            role,
-            jd: `Auto-detected from Gmail inbox.\n\nSubject: ${email.subject}\nFrom: ${email.from}\nDate: ${email.receivedAt.toISOString()}\n\n${email.snippet}`,
-            status,
-            statusHistory: [{ status, note, changedAt: new Date() }],
-            gmailThreadIds: [email.threadId],
-            notes: email.subject,
-            nextStep: email.nextStep,
-            appliedAt: status === 'applied' ? email.receivedAt : undefined,
-          })
-
-          apps.push(created)
-          newApplications++
-          getIO().emit('job:created', created)
-          detected.push({ company, subject: email.subject, status, matched: false })
-        }
-
-        processed.add(messageId)
-      }
-
-      await GmailToken.findOneAndUpdate(
-        { _id: tokenDoc._id },
-        {
-          processedMessageIds: [...processed].slice(-5000),
-          lastSyncAt: new Date(),
-        },
+      const merged = results.reduce(
+        (acc, r) => ({
+          scanned: acc.scanned + r.scanned,
+          invitesFound: acc.invitesFound + r.invitesFound,
+          statusUpdates: acc.statusUpdates + r.statusUpdates,
+          newApplications: acc.newApplications + r.newApplications,
+          detected: [...acc.detected, ...r.detected],
+        }),
+        { scanned: 0, invitesFound: 0, statusUpdates: 0, newApplications: 0, detected: [] as any[] },
       )
 
-      res.json({
-        scanned: messageIds.size,
-        invitesFound,
-        statusUpdates,
-        newApplications,
-        detected,
-      })
+      res.json(merged)
     } catch (e) {
       next(e)
     }

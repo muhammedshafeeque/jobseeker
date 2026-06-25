@@ -3,6 +3,7 @@ import { COLLECTIONS } from '../../Constant/collections'
 
 const schema = new Schema(
   {
+    userId: { type: Schema.Types.ObjectId, ref: COLLECTIONS.USER, required: true, index: true },
     title: { type: String, required: true },
     company: { type: String },
     location: { type: String },

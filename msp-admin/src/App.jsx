@@ -6,7 +6,6 @@ import AuthCallback from './pages/AuthCallback'
 import Dashboard from './pages/Dashboard'
 import CVManager from './pages/CVManager'
 import JobTracker from './pages/JobTracker'
-import Enquiries from './pages/Enquiries'
 import Settings from './pages/Settings'
 import JobAlerts from './pages/JobAlerts'
 import Opportunities from './pages/Opportunities'
@@ -25,7 +24,6 @@ function AppRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="cv" element={<CVManager />} />
         <Route path="jobs" element={<JobTracker />} />
-        <Route path="enquiries" element={<Enquiries />} />
         <Route path="job-alerts" element={<JobAlerts />} />
         <Route path="opportunities" element={<Opportunities />} />
         <Route path="settings" element={<Settings />} />
