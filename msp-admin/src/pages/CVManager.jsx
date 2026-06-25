@@ -26,7 +26,7 @@ const Textarea = ({ label, rows = 4, ...props }) => (
 )
 
 const btn = {
-  primary: 'flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl text-sm font-medium border border-zinc-700 transition disabled:opacity-40',
+  primary: 'flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition disabled:opacity-40',
   ghost: 'flex items-center gap-2 px-4 py-2 border border-zinc-800 text-zinc-400 rounded-xl text-sm hover:bg-zinc-900 hover:text-zinc-200 transition disabled:opacity-40',
   sm: 'flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg text-xs font-medium border border-zinc-800 hover:border-zinc-700 transition disabled:opacity-40',
   add: 'flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-200 transition mt-1',
@@ -404,16 +404,17 @@ function AtsSection({ onProfileUpdated }) {
             <div className="relative w-20 h-20 shrink-0">
               <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#27272a" strokeWidth="3"/>
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#a1a1aa" strokeWidth="3"
-                  strokeDasharray={`${(score/100)*100} 100`}
+                <circle cx="18" cy="18" r="15.9" fill="none"
+                  stroke={score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444'}
+                  strokeWidth="3" strokeDasharray={`${(score/100)*100} 100`}
                   strokeLinecap="round" pathLength="100"/>
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-bold text-zinc-100">{score}</span>
+                <span className={`text-lg font-bold ${score >= 75 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{score}</span>
               </div>
             </div>
             <div>
-              <p className="text-lg font-semibold text-zinc-100">{result.verdict}</p>
+              <p className={`text-lg font-semibold ${score >= 75 ? 'text-emerald-300' : score >= 50 ? 'text-amber-300' : 'text-red-400'}`}>{result.verdict}</p>
               <p className="text-xs text-zinc-500 mt-0.5">ATS Match Score</p>
             </div>
           </div>
@@ -422,20 +423,20 @@ function AtsSection({ onProfileUpdated }) {
           <div className="grid sm:grid-cols-2 gap-4">
             {result.matchedKeywords?.length > 0 && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <p className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-2">Matched keywords</p>
+                <p className="text-xs text-emerald-500 font-medium uppercase tracking-wider mb-2">✓ Matched keywords</p>
                 <div className="flex flex-wrap gap-1.5">
                   {result.matchedKeywords.map((k,i) => (
-                    <span key={i} className="bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs px-2 py-0.5 rounded-lg">{k}</span>
+                    <span key={i} className="bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 text-xs px-2 py-0.5 rounded-lg">{k}</span>
                   ))}
                 </div>
               </div>
             )}
             {result.missingKeywords?.length > 0 && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-2">Missing keywords</p>
+                <p className="text-xs text-red-500 font-medium uppercase tracking-wider mb-2">✗ Missing keywords</p>
                 <div className="flex flex-wrap gap-1.5">
                   {result.missingKeywords.map((k,i) => (
-                    <span key={i} className="bg-zinc-900 border border-zinc-700 text-zinc-400 text-xs px-2 py-0.5 rounded-lg">{k}</span>
+                    <span key={i} className="bg-red-950/30 border border-red-900/40 text-red-400 text-xs px-2 py-0.5 rounded-lg">{k}</span>
                   ))}
                 </div>
               </div>
@@ -446,7 +447,7 @@ function AtsSection({ onProfileUpdated }) {
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <p className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-2">Strengths</p>
               <ul className="space-y-1.5">
-                {result.strengths.map((s,i) => <li key={i} className="text-sm text-zinc-300 flex gap-2"><span className="text-zinc-500 shrink-0">+</span>{s}</li>)}
+                {result.strengths.map((s,i) => <li key={i} className="text-sm text-zinc-300 flex gap-2"><span className="text-emerald-500 shrink-0">+</span>{s}</li>)}
               </ul>
             </div>
           )}
@@ -455,7 +456,7 @@ function AtsSection({ onProfileUpdated }) {
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <p className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-2">Suggestions</p>
               <ul className="space-y-1.5">
-                {result.suggestions.map((s,i) => <li key={i} className="text-sm text-zinc-400 flex gap-2"><span className="text-zinc-600 shrink-0">→</span>{s}</li>)}
+                {result.suggestions.map((s,i) => <li key={i} className="text-sm text-zinc-400 flex gap-2"><span className="text-indigo-400 shrink-0">→</span>{s}</li>)}
               </ul>
             </div>
           )}
@@ -836,7 +837,7 @@ export default function CVManager() {
 
       {uploadMsg && (
         <div className={`flex items-center gap-2 mb-4 px-4 py-3 rounded-xl text-sm border ${
-          uploadMsg.type === 'success' ? 'bg-zinc-900 border-zinc-700 text-zinc-300' : 'bg-zinc-900 border-zinc-700 text-zinc-400'
+          uploadMsg.type === 'success' ? 'bg-emerald-950/30 border-emerald-800/50 text-emerald-300' : 'bg-red-950/20 border-red-900/50 text-red-400'
         }`}>
           {uploadMsg.type === 'success' ? <CheckCircle size={14}/> : <X size={14}/>} {uploadMsg.text}
         </div>
@@ -848,7 +849,7 @@ export default function CVManager() {
           {TABS.map(([key, label]) => (
             <button key={key} onClick={() => setActiveTab(key)}
               className={`px-3.5 py-1.5 text-xs font-medium transition whitespace-nowrap ${
-                activeTab === key ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+                activeTab === key ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-zinc-200'
               }`}>
               {label}
             </button>

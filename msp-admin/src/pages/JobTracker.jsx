@@ -15,45 +15,27 @@ const parseTailored = raw => {
 }
 
 export const STATUSES = [
-  { value: 'draft',        label: 'Draft',        dim: true  },
-  { value: 'applied',      label: 'Applied',      dim: false },
-  { value: 'responded',    label: 'Responded',    dim: false },
-  { value: 'phone_screen', label: 'Phone Screen', dim: false },
-  { value: 'code_test',    label: 'Code Test',    dim: false },
-  { value: 'interview_1',  label: 'Interview 1',  dim: false },
-  { value: 'interview_2',  label: 'Interview 2',  dim: false },
-  { value: 'interview_3',  label: 'Interview 3',  dim: false },
-  { value: 'offer',        label: 'Offer',        dim: false },
-  { value: 'accepted',     label: 'Accepted',     dim: false },
-  { value: 'rejected',     label: 'Rejected',     dim: true  },
-  { value: 'withdrawn',    label: 'Withdrawn',    dim: true  },
+  { value: 'draft',        label: 'Draft',        cls: 'bg-zinc-800/60 text-zinc-500 border-zinc-700' },
+  { value: 'applied',      label: 'Applied',      cls: 'bg-blue-950/60 text-blue-300 border-blue-800/50' },
+  { value: 'responded',    label: 'Responded',    cls: 'bg-sky-950/60 text-sky-300 border-sky-800/50' },
+  { value: 'phone_screen', label: 'Phone Screen', cls: 'bg-violet-950/60 text-violet-300 border-violet-800/50' },
+  { value: 'code_test',    label: 'Code Test',    cls: 'bg-purple-950/60 text-purple-300 border-purple-800/50' },
+  { value: 'interview_1',  label: 'Interview 1',  cls: 'bg-amber-950/60 text-amber-300 border-amber-800/50' },
+  { value: 'interview_2',  label: 'Interview 2',  cls: 'bg-orange-950/60 text-orange-300 border-orange-800/50' },
+  { value: 'interview_3',  label: 'Interview 3',  cls: 'bg-orange-950/80 text-orange-200 border-orange-700/50' },
+  { value: 'offer',        label: 'Offer',        cls: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/50' },
+  { value: 'accepted',     label: 'Accepted',     cls: 'bg-green-900/60 text-green-200 border-green-700/50 font-semibold' },
+  { value: 'rejected',     label: 'Rejected',     cls: 'bg-red-950/40 text-red-400 border-red-900/50' },
+  { value: 'withdrawn',    label: 'Withdrawn',    cls: 'bg-zinc-800/40 text-zinc-500 border-zinc-700/50' },
 ]
 
-const STAGE_ORDER = ['draft','applied','responded','phone_screen','code_test','interview_1','interview_2','interview_3','offer','accepted','rejected','withdrawn']
-const stageIndex = s => STAGE_ORDER.indexOf(s)
-
-const StatusBadge = ({ status, size = 'sm' }) => {
-  const s = STATUSES.find(x => x.value === status) ?? STATUSES[0]
-  const base = size === 'xs'
-    ? 'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border'
-    : 'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border'
-  const style = s.dim
-    ? 'bg-zinc-900 text-zinc-500 border-zinc-800'
-    : stageIndex(status) >= stageIndex('offer')
-      ? 'bg-zinc-700 text-zinc-100 border-zinc-600 font-semibold'
-      : stageIndex(status) >= stageIndex('interview_1')
-        ? 'bg-zinc-800 text-zinc-100 border-zinc-600'
-        : 'bg-zinc-800 text-zinc-300 border-zinc-700'
-  return <span className={`${base} ${style}`}>{s.label}</span>
-}
-
 const KANBAN_COLS = [
-  { id: 'draft',     label: 'Draft',     statuses: ['draft'] },
-  { id: 'applied',   label: 'Applied',   statuses: ['applied', 'responded'] },
-  { id: 'screening', label: 'Screening', statuses: ['phone_screen', 'code_test'] },
-  { id: 'interview', label: 'Interview', statuses: ['interview_1','interview_2','interview_3'] },
-  { id: 'offer',     label: 'Offer',     statuses: ['offer', 'accepted'] },
-  { id: 'closed',    label: 'Closed',    statuses: ['rejected', 'withdrawn'] },
+  { id: 'draft',     label: 'Draft',     hdr: 'border-zinc-700 text-zinc-400',     statuses: ['draft'] },
+  { id: 'applied',   label: 'Applied',   hdr: 'border-blue-800/60 text-blue-400',  statuses: ['applied','responded'] },
+  { id: 'screening', label: 'Screening', hdr: 'border-violet-800/60 text-violet-400', statuses: ['phone_screen','code_test'] },
+  { id: 'interview', label: 'Interview', hdr: 'border-amber-800/60 text-amber-400', statuses: ['interview_1','interview_2','interview_3'] },
+  { id: 'offer',     label: 'Offer',     hdr: 'border-emerald-800/60 text-emerald-400', statuses: ['offer','accepted'] },
+  { id: 'closed',    label: 'Closed',    hdr: 'border-red-900/60 text-red-500',    statuses: ['rejected','withdrawn'] },
 ]
 
 const fmt = n => n
@@ -63,21 +45,29 @@ const fmt = n => n
 const daysAgo = date => date ? Math.floor((Date.now() - new Date(date).getTime()) / 86400000) : null
 const needsFollowUp = app => app.status === 'applied' && app.appliedAt && daysAgo(app.appliedAt) >= 7
 
-const inp = 'w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600 placeholder-zinc-600'
+const StatusBadge = ({ status, size = 'sm' }) => {
+  const s = STATUSES.find(x => x.value === status) ?? STATUSES[0]
+  const base = size === 'xs'
+    ? 'inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border'
+    : 'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border'
+  return <span className={`${base} ${s.cls}`}>{s.label}</span>
+}
+
+const inp = 'w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/60 placeholder-zinc-600'
 const btn = {
-  primary: 'flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl text-sm font-medium border border-zinc-600 transition disabled:opacity-40',
-  ghost:   'flex items-center gap-2 px-4 py-2 border border-zinc-800 text-zinc-400 rounded-xl text-sm hover:bg-zinc-900 hover:text-zinc-200 transition disabled:opacity-40',
-  sm:      'flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg text-xs font-medium border border-zinc-800 hover:border-zinc-700 transition disabled:opacity-40',
+  primary: 'flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition disabled:opacity-40',
+  ghost:   'flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 rounded-xl text-sm hover:bg-zinc-800 hover:text-zinc-200 transition disabled:opacity-40',
+  sm:      'flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-medium border border-zinc-700 hover:border-zinc-600 transition disabled:opacity-40',
 }
 
 function NewJobModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ company: '', role: '', jd: '', maxBudget: '', askedBudget: '', location: '', jobUrl: '', notes: '' })
+  const [form, setForm] = useState({ company:'', role:'', jd:'', maxBudget:'', askedBudget:'', location:'', jobUrl:'', notes:'' })
   const [loading, setLoading] = useState(false)
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
   const submit = async e => {
     e.preventDefault(); setLoading(true)
     try {
-      const { data } = await api.post('/jobs', { ...form, maxBudget: form.maxBudget || undefined, askedBudget: form.askedBudget || undefined })
+      const { data } = await api.post('/jobs', { ...form, maxBudget: form.maxBudget||undefined, askedBudget: form.askedBudget||undefined })
       onCreated(data); onClose()
     } catch (err) { alert(err.response?.data?.message || 'Failed') }
     finally { setLoading(false) }
@@ -87,25 +77,25 @@ function NewJobModal({ onClose, onCreated }) {
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
           <h2 className="text-sm font-semibold text-zinc-100">New Application</h2>
-          <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300"><X size={16} /></button>
+          <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300"><X size={16}/></button>
         </div>
         <form onSubmit={submit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1"><label className="text-xs text-zinc-600">Company *</label><input value={form.company} onChange={set('company')} required className={inp} /></div>
-            <div className="space-y-1"><label className="text-xs text-zinc-600">Role *</label><input value={form.role} onChange={set('role')} required className={inp} /></div>
-            <div className="space-y-1"><label className="text-xs text-zinc-600">Max Budget (INR)</label><input type="number" value={form.maxBudget} onChange={set('maxBudget')} className={inp} /></div>
-            <div className="space-y-1"><label className="text-xs text-zinc-600">My Ask (INR)</label><input type="number" value={form.askedBudget} onChange={set('askedBudget')} className={inp} /></div>
-            <div className="space-y-1"><label className="text-xs text-zinc-600">Location</label><input value={form.location} onChange={set('location')} className={inp} /></div>
-            <div className="space-y-1"><label className="text-xs text-zinc-600">Job URL</label><input type="url" value={form.jobUrl} onChange={set('jobUrl')} className={inp} /></div>
+            <div className="space-y-1"><label className="text-xs text-zinc-500">Company *</label><input value={form.company} onChange={set('company')} required className={inp}/></div>
+            <div className="space-y-1"><label className="text-xs text-zinc-500">Role *</label><input value={form.role} onChange={set('role')} required className={inp}/></div>
+            <div className="space-y-1"><label className="text-xs text-zinc-500">Max Budget (INR)</label><input type="number" value={form.maxBudget} onChange={set('maxBudget')} className={inp}/></div>
+            <div className="space-y-1"><label className="text-xs text-zinc-500">My Ask (INR)</label><input type="number" value={form.askedBudget} onChange={set('askedBudget')} className={inp}/></div>
+            <div className="space-y-1"><label className="text-xs text-zinc-500">Location</label><input value={form.location} onChange={set('location')} className={inp}/></div>
+            <div className="space-y-1"><label className="text-xs text-zinc-500">Job URL</label><input type="url" value={form.jobUrl} onChange={set('jobUrl')} className={inp}/></div>
           </div>
-          <div className="space-y-1"><label className="text-xs text-zinc-600">Job Description *</label>
-            <textarea value={form.jd} onChange={set('jd')} required rows={6} className={`${inp} resize-none font-mono`} /></div>
-          <div className="space-y-1"><label className="text-xs text-zinc-600">Notes</label>
-            <textarea value={form.notes} onChange={set('notes')} rows={2} className={`${inp} resize-none`} /></div>
+          <div className="space-y-1"><label className="text-xs text-zinc-500">Job Description *</label>
+            <textarea value={form.jd} onChange={set('jd')} required rows={6} className={`${inp} resize-none font-mono`}/></div>
+          <div className="space-y-1"><label className="text-xs text-zinc-500">Notes</label>
+            <textarea value={form.notes} onChange={set('notes')} rows={2} className={`${inp} resize-none`}/></div>
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={onClose} className={btn.ghost}>Cancel</button>
             <button type="submit" disabled={loading} className={btn.primary}>
-              {loading && <Loader2 size={13} className="animate-spin" />} Save
+              {loading && <Loader2 size={13} className="animate-spin"/>} Save
             </button>
           </div>
         </form>
@@ -175,7 +165,7 @@ function JobDetail({ app, onClose, onUpdate }) {
               <span className="flex items-center gap-1"><Building2 size={11}/>{app.company}</span>
               {app.location && <span className="flex items-center gap-1"><MapPin size={11}/>{app.location}</span>}
               {days !== null && <span><Clock size={11} className="inline mr-0.5"/>{days}d ago</span>}
-              <StatusBadge status={app.status} size="xs" />
+              <StatusBadge status={app.status} size="xs"/>
             </div>
           </div>
           <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300 mt-0.5"><X size={16}/></button>
@@ -183,47 +173,42 @@ function JobDetail({ app, onClose, onUpdate }) {
 
         <div className="p-6 space-y-5">
           {needsFollowUp(app) && (
-            <div className="flex items-center gap-2 border border-zinc-800 rounded-xl px-4 py-3 text-xs text-zinc-400 bg-zinc-900">
+            <div className="flex items-center gap-2 border border-amber-800/40 rounded-xl px-4 py-3 text-xs text-amber-300 bg-amber-950/20">
               <AlertTriangle size={13} className="shrink-0"/> Applied {days} days ago with no response — consider following up.
             </div>
           )}
 
-          {/* Key info */}
           {(app.maxBudget || app.askedBudget || app.jobUrl) && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 grid grid-cols-2 gap-3">
               {app.maxBudget && <div><p className="text-xs text-zinc-600 mb-0.5">Max Budget</p><p className="text-sm font-medium text-zinc-200">{fmt(app.maxBudget)}</p></div>}
               {app.askedBudget && <div><p className="text-xs text-zinc-600 mb-0.5">My Ask</p><p className="text-sm font-medium text-zinc-200">{fmt(app.askedBudget)}</p></div>}
               {app.jobUrl && <div className="col-span-2">
                 <a href={app.jobUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition truncate">
+                  className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition truncate">
                   <ExternalLink size={10}/>{app.jobUrl}
                 </a>
               </div>}
             </div>
           )}
 
-          {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-zinc-600 flex items-center gap-1"><Calendar size={10}/> Interview Date</label>
+              <label className="text-xs text-zinc-500 flex items-center gap-1"><Calendar size={10}/> Interview Date</label>
               <input type="datetime-local" value={interviewDate} onChange={e => setInterviewDate(e.target.value)} className={inp}/>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-zinc-600 flex items-center gap-1"><Bell size={10}/> Follow-up On</label>
+              <label className="text-xs text-zinc-500 flex items-center gap-1"><Bell size={10}/> Follow-up On</label>
               <input type="date" value={followUpAt} onChange={e => setFollowUpAt(e.target.value)} className={inp}/>
             </div>
           </div>
 
-          {/* Status */}
           <div className="space-y-3">
-            <p className="text-xs text-zinc-600 uppercase tracking-wider font-medium">Update Status</p>
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Update Status</p>
             <div className="flex flex-wrap gap-1.5">
               {STATUSES.map(s => (
                 <button key={s.value} onClick={() => setStatus(s.value)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
-                    status === s.value
-                      ? 'bg-zinc-200 text-zinc-900 border-zinc-200'
-                      : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-zinc-200 hover:border-zinc-700'
+                    status === s.value ? `${s.cls} ring-1 ring-white/20` : 'bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-zinc-200 hover:border-zinc-700'
                   }`}>{s.label}</button>
               ))}
             </div>
@@ -239,10 +224,9 @@ function JobDetail({ app, onClose, onUpdate }) {
             </div>
           </div>
 
-          {/* History */}
           {app.statusHistory?.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs text-zinc-600 uppercase tracking-wider font-medium">History</p>
+              <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">History</p>
               <div className="space-y-1 max-h-36 overflow-y-auto">
                 {[...app.statusHistory].reverse().map((h, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
@@ -255,15 +239,14 @@ function JobDetail({ app, onClose, onUpdate }) {
             </div>
           )}
 
-          {/* Notes */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-zinc-600 uppercase tracking-wider font-medium">Notes</p>
+              <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Notes</p>
               {!editingNotes
-                ? <button onClick={() => setEditingNotes(true)} className="text-xs text-zinc-600 hover:text-zinc-300">Edit</button>
+                ? <button onClick={() => setEditingNotes(true)} className="text-xs text-zinc-500 hover:text-indigo-400">Edit</button>
                 : <div className="flex gap-3">
-                    <button onClick={saveNotes} className="text-xs text-zinc-300">Save</button>
-                    <button onClick={() => { setEditNotes(app.notes ?? ''); setEditingNotes(false) }} className="text-xs text-zinc-600">Cancel</button>
+                    <button onClick={saveNotes} className="text-xs text-indigo-400 hover:text-indigo-300">Save</button>
+                    <button onClick={() => { setEditNotes(app.notes??''); setEditingNotes(false) }} className="text-xs text-zinc-600">Cancel</button>
                   </div>
               }
             </div>
@@ -275,10 +258,9 @@ function JobDetail({ app, onClose, onUpdate }) {
             }
           </div>
 
-          {/* CV tailor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-zinc-600 uppercase tracking-wider font-medium">Tailored CV</p>
+              <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Tailored CV</p>
               <div className="flex gap-2">
                 <button onClick={tailorCV} disabled={tailoring} className={btn.sm}>
                   {tailoring ? <Loader2 size={11} className="animate-spin"/> : '✦'} {tailored ? 'Re-tailor' : 'Tailor for this role'}
@@ -296,9 +278,8 @@ function JobDetail({ app, onClose, onUpdate }) {
             )}
           </div>
 
-          {/* JD */}
           <details className="group">
-            <summary className="text-xs text-zinc-600 uppercase tracking-wider font-medium cursor-pointer select-none list-none flex items-center gap-1 hover:text-zinc-400">
+            <summary className="text-xs text-zinc-500 uppercase tracking-wider font-medium cursor-pointer select-none list-none flex items-center gap-1 hover:text-zinc-300">
               <ChevronRight size={11} className="group-open:rotate-90 transition-transform"/> Job Description
             </summary>
             <pre className="mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-500 whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-auto">{app.jd}</pre>
@@ -314,13 +295,13 @@ function KanbanCard({ app, onClick, onDragStart }) {
   return (
     <div draggable onDragStart={e => { e.dataTransfer.setData('appId', app._id); onDragStart(app._id) }}
       onClick={() => onClick(app)}
-      className="bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-xl p-3 cursor-pointer transition select-none">
+      className="bg-zinc-950 border border-zinc-800 hover:border-zinc-600 rounded-xl p-3 cursor-pointer transition select-none">
       <p className="text-xs font-medium text-zinc-100 leading-snug truncate">{app.role}</p>
       <p className="text-xs text-zinc-500 mt-0.5 truncate">{app.company}</p>
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-900">
         <span className="text-[10px] text-zinc-700">{days !== null ? `${days}d` : ''}</span>
         <div className="flex items-center gap-1">
-          {needsFollowUp(app) && <AlertTriangle size={10} className="text-zinc-600"/>}
+          {needsFollowUp(app) && <AlertTriangle size={10} className="text-amber-500"/>}
           {app.askedBudget && <span className="text-[10px] text-zinc-700">{fmt(app.askedBudget)}</span>}
         </div>
       </div>
@@ -335,8 +316,7 @@ function KanbanBoard({ apps, onCardClick, onStatusChange }) {
     const appId = e.dataTransfer.getData('appId')
     const app = apps.find(a => a._id === appId)
     if (!app || app.status === col.statuses[0]) { setDragOver(null); return }
-    await onStatusChange(appId, col.statuses[0])
-    setDragOver(null)
+    await onStatusChange(appId, col.statuses[0]); setDragOver(null)
   }
   return (
     <div className="flex gap-3 overflow-x-auto pb-4">
@@ -345,16 +325,16 @@ function KanbanBoard({ apps, onCardClick, onStatusChange }) {
         const isOver = dragOver === col.id
         return (
           <div key={col.id}
-            className={`flex-shrink-0 w-52 rounded-2xl border transition ${isOver ? 'border-zinc-600' : 'border-zinc-800'} bg-zinc-900/30`}
+            className={`flex-shrink-0 w-52 rounded-2xl border transition ${isOver ? 'border-indigo-700/60 bg-indigo-950/10' : 'border-zinc-800 bg-zinc-900/20'}`}
             onDragOver={e => { e.preventDefault(); setDragOver(col.id) }}
             onDragLeave={() => setDragOver(null)}
             onDrop={e => handleDrop(e, col)}>
-            <div className="px-3 py-2.5 border-b border-zinc-800 flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{col.label}</span>
+            <div className={`px-3 py-2.5 border-b border-zinc-800 flex items-center justify-between`}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${col.hdr}`}>{col.label}</span>
               <span className="text-[10px] text-zinc-600 bg-zinc-800 rounded-full w-5 h-5 flex items-center justify-center">{colApps.length}</span>
             </div>
             <div className="p-2 space-y-2 min-h-20">
-              {colApps.map(app => <KanbanCard key={app._id} app={app} onClick={onCardClick} onDragStart={() => {}} />)}
+              {colApps.map(app => <KanbanCard key={app._id} app={app} onClick={onCardClick} onDragStart={() => {}}/>)}
             </div>
           </div>
         )
@@ -387,37 +367,37 @@ function AnalyticsPanel({ onClose }) {
         </div>
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[['Total', data?.total ?? 0],['Active', data?.activeCount ?? 0],[`${data?.responseRate ?? 0}%`,'Response rate'],['Offers', data?.offersCount ?? 0]].map(([v, l]) => (
+            {[['Total', data?.total??0],['Active', data?.activeCount??0],[`${data?.responseRate??0}%`,'Response'],['Offers', data?.offersCount??0]].map(([v,l]) => (
               <div key={l} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
                 <p className="text-xl font-bold text-zinc-100">{v}</p>
-                <p className="text-xs text-zinc-600 mt-0.5">{l}</p>
+                <p className="text-xs text-zinc-500 mt-0.5">{l}</p>
               </div>
             ))}
           </div>
           {data?.avgDaysToResponse != null && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3">
-              <Clock size={16} className="text-zinc-500"/><div>
+              <Clock size={16} className="text-indigo-400"/><div>
                 <p className="text-sm font-medium text-zinc-200">{data.avgDaysToResponse} days avg to first response</p>
               </div>
             </div>
           )}
           {data?.followUpNeeded > 0 && (
-            <div className="border border-zinc-800 rounded-xl p-4 flex items-center gap-2">
-              <AlertTriangle size={14} className="text-zinc-500 shrink-0"/>
-              <p className="text-xs text-zinc-400"><strong className="text-zinc-200">{data.followUpNeeded}</strong> application{data.followUpNeeded !== 1 ? 's' : ''} need follow-up (7+ days, no response)</p>
+            <div className="border border-amber-800/40 bg-amber-950/20 rounded-xl p-4 flex items-center gap-2">
+              <AlertTriangle size={14} className="text-amber-400 shrink-0"/>
+              <p className="text-xs text-amber-300"><strong>{data.followUpNeeded}</strong> application{data.followUpNeeded!==1?'s':''} need follow-up (7+ days, no response)</p>
             </div>
           )}
           {data?.weeklyData?.some(w => w.count > 0) && (
             <div>
-              <p className="text-xs text-zinc-600 uppercase tracking-wider mb-3">Applications per week</p>
+              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Applications per week</p>
               <div className="flex items-end gap-1.5 h-16">
                 {data.weeklyData.map((w, i) => {
                   const max = Math.max(...data.weeklyData.map(x => x.count), 1)
                   const h = Math.round((w.count / max) * 100)
                   return (
                     <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      {w.count > 0 && <span className="text-[9px] text-zinc-600">{w.count}</span>}
-                      <div className="w-full bg-zinc-700 rounded-t" style={{ height: `${h}%`, minHeight: w.count ? 3 : 0 }}/>
+                      {w.count > 0 && <span className="text-[9px] text-zinc-500">{w.count}</span>}
+                      <div className="w-full bg-indigo-500/70 rounded-t" style={{ height:`${h}%`, minHeight:w.count?3:0 }}/>
                       <span className="text-[8px] text-zinc-700 truncate w-full text-center">{w.week}</span>
                     </div>
                   )
@@ -426,13 +406,13 @@ function AnalyticsPanel({ onClose }) {
             </div>
           )}
           <div>
-            <p className="text-xs text-zinc-600 uppercase tracking-wider mb-3">Pipeline</p>
+            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Pipeline</p>
             <div className="space-y-2">
-              {Object.entries(data?.byStatus ?? {}).filter(([,v]) => v > 0).map(([status, count]) => (
+              {Object.entries(data?.byStatus??{}).filter(([,v])=>v>0).map(([status, count]) => (
                 <div key={status} className="flex items-center gap-3">
-                  <span className="text-xs text-zinc-600 w-28 shrink-0">{statusLabels[status] ?? status}</span>
+                  <span className="text-xs text-zinc-600 w-28 shrink-0">{statusLabels[status]??status}</span>
                   <div className="flex-1 bg-zinc-800 rounded-full h-1.5">
-                    <div className="bg-zinc-500 h-1.5 rounded-full" style={{ width: `${Math.round((count/data.total)*100)}%` }}/>
+                    <div className="bg-indigo-500/60 h-1.5 rounded-full" style={{ width:`${Math.round((count/data.total)*100)}%` }}/>
                   </div>
                   <span className="text-xs text-zinc-500 w-4 text-right">{count}</span>
                 </div>
@@ -441,8 +421,8 @@ function AnalyticsPanel({ onClose }) {
           </div>
           {data?.rejectionReasons?.length > 0 && (
             <div>
-              <p className="text-xs text-zinc-600 uppercase tracking-wider mb-2">Rejection Reasons</p>
-              {data.rejectionReasons.map((r, i) => (
+              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Rejection Reasons</p>
+              {data.rejectionReasons.map((r,i) => (
                 <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-500 mb-1.5">{r}</div>
               ))}
             </div>
@@ -473,14 +453,14 @@ export default function JobTracker() {
   }
 
   const handleStatusChange = async (appId, status) => {
-    try { const { data } = await api.patch(`/jobs/${appId}/status`, { status }); setApps(p => p.map(x => x._id === appId ? data : x)) }
+    try { const { data } = await api.patch(`/jobs/${appId}/status`, { status }); setApps(p => p.map(x => x._id===appId ? data : x)) }
     catch { alert('Status update failed') }
   }
 
   const exportCsv = async () => {
     setExporting(true)
     try {
-      const res = await api.get('/jobs/export', { responseType: 'blob' })
+      const res = await api.get('/jobs/export', { responseType:'blob' })
       const url = URL.createObjectURL(res.data)
       const a = document.createElement('a'); a.href = url
       const d = res.headers?.['content-disposition']
@@ -493,12 +473,12 @@ export default function JobTracker() {
   useEffect(() => {
     load()
     socket.on('job:created', a => setApps(p => [a, ...p]))
-    socket.on('job:updated', a => setApps(p => p.map(x => x._id === a._id ? a : x)))
-    socket.on('job:deleted', ({ id }) => setApps(p => p.filter(x => x._id !== id)))
+    socket.on('job:updated', a => setApps(p => p.map(x => x._id===a._id ? a : x)))
+    socket.on('job:deleted', ({ id }) => setApps(p => p.filter(x => x._id!==id)))
     return () => { socket.off('job:created'); socket.off('job:updated'); socket.off('job:deleted') }
   }, [])
 
-  const filtered = filter === 'all' ? apps : apps.filter(a => a.status === filter)
+  const filtered = filter==='all' ? apps : apps.filter(a => a.status===filter)
   const followUpCount = apps.filter(needsFollowUp).length
 
   return (
@@ -507,52 +487,53 @@ export default function JobTracker() {
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-zinc-100">Job Tracker</h1>
           {followUpCount > 0 && (
-            <span className="flex items-center gap-1 border border-zinc-800 text-zinc-500 text-xs px-2 py-0.5 rounded-full">
-              <AlertTriangle size={10}/> {followUpCount} follow-up{followUpCount !== 1 ? 's' : ''}
+            <span className="flex items-center gap-1 border border-amber-800/50 text-amber-400 text-xs px-2 py-0.5 rounded-full bg-amber-950/20">
+              <AlertTriangle size={10}/> {followUpCount} follow-up{followUpCount!==1?'s':''}
             </span>
           )}
         </div>
         <div className="flex gap-2 flex-wrap items-center">
           <div className="flex border border-zinc-800 rounded-xl overflow-hidden">
-            <button onClick={() => setView('list')} className={`p-2 transition ${view === 'list' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><LayoutList size={15}/></button>
-            <button onClick={() => setView('kanban')} className={`p-2 transition ${view === 'kanban' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><Columns size={15}/></button>
+            <button onClick={() => setView('list')} className={`p-2 transition ${view==='list' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><LayoutList size={15}/></button>
+            <button onClick={() => setView('kanban')} className={`p-2 transition ${view==='kanban' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><Columns size={15}/></button>
           </div>
           <button onClick={() => setShowAnalytics(true)} className={btn.ghost}><BarChart2 size={14}/> Analytics</button>
           <button onClick={exportCsv} disabled={exporting} className={btn.ghost}>
             {exporting ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>} Export
           </button>
           <button onClick={syncGmail} disabled={syncing} className={btn.ghost}>
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''}/> {syncing ? 'Syncing…' : 'Gmail Sync'}
+            <RefreshCw size={14} className={syncing?'animate-spin':''}/> {syncing?'Syncing…':'Gmail Sync'}
           </button>
           <button onClick={() => setShowNew(true)} className={btn.primary}><Plus size={15}/> New</button>
         </div>
       </div>
 
-      {view === 'kanban' ? (
+      {view==='kanban' ? (
         <KanbanBoard apps={apps} onCardClick={setSelected} onStatusChange={handleStatusChange}/>
       ) : (
         <>
           <div className="flex gap-1.5 flex-wrap mb-5">
-            <button onClick={() => setFilter('all')} className={`px-3 py-1 rounded-lg text-xs font-medium border transition ${filter === 'all' ? 'bg-zinc-800 text-zinc-100 border-zinc-700' : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-700'}`}>
+            <button onClick={() => setFilter('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium border transition ${filter==='all' ? 'bg-indigo-600/20 text-indigo-300 border-indigo-700/50' : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-700'}`}>
               All · {apps.length}
             </button>
             {STATUSES.map(s => {
-              const count = apps.filter(a => a.status === s.value).length
+              const count = apps.filter(a => a.status===s.value).length
               if (!count) return null
               return (
                 <button key={s.value} onClick={() => setFilter(s.value)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium border transition ${filter === s.value ? 'bg-zinc-700 text-zinc-100 border-zinc-600' : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-700'}`}>
+                  className={`px-3 py-1 rounded-lg text-xs font-medium border transition ${filter===s.value ? `${s.cls} ring-1 ring-white/10` : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-700'}`}>
                   {s.label} · {count}
                 </button>
               )
             })}
           </div>
 
-          {filtered.length === 0 ? (
+          {filtered.length===0 ? (
             <div className="text-center py-24 space-y-3">
               <Briefcase size={32} className="mx-auto text-zinc-800"/>
               <p className="text-zinc-600 text-sm">No applications yet</p>
-              <button onClick={() => setShowNew(true)} className="text-xs text-zinc-600 hover:text-zinc-400 underline underline-offset-2">Add your first application</button>
+              <button onClick={() => setShowNew(true)} className="text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2">Add your first application</button>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -569,7 +550,7 @@ export default function JobTracker() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {needsFollowUp(app) && <AlertTriangle size={12} className="text-zinc-600"/>}
+                    {needsFollowUp(app) && <AlertTriangle size={12} className="text-amber-500"/>}
                     {app.askedBudget && <span className="text-xs text-zinc-700 hidden sm:block">{fmt(app.askedBudget)}</span>}
                     <StatusBadge status={app.status} size="xs"/>
                     <ChevronRight size={13} className="text-zinc-800 group-hover:text-zinc-600 transition"/>
@@ -581,8 +562,8 @@ export default function JobTracker() {
         </>
       )}
 
-      {showNew && <NewJobModal onClose={() => setShowNew(false)} onCreated={a => setApps(p => [a, ...p])}/>}
-      {selected && <JobDetail app={selected} onClose={() => setSelected(null)} onUpdate={a => { setApps(p => p.map(x => x._id === a._id ? a : x)); setSelected(a) }}/>}
+      {showNew && <NewJobModal onClose={() => setShowNew(false)} onCreated={a => setApps(p => [a,...p])}/>}
+      {selected && <JobDetail app={selected} onClose={() => setSelected(null)} onUpdate={a => { setApps(p => p.map(x => x._id===a._id?a:x)); setSelected(a) }}/>}
       {showAnalytics && <AnalyticsPanel onClose={() => setShowAnalytics(false)}/>}
     </div>
   )

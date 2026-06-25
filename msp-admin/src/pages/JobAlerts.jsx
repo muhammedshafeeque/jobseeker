@@ -49,11 +49,11 @@ function EmailIframe({ html }) {
 }
 
 const SOURCE_LABELS = {
-  indeed: { label: 'Indeed', color: 'bg-zinc-900 text-zinc-400' },
+  indeed: { label: 'Indeed', color: 'bg-blue-950/60 text-blue-300' },
   naukri: { label: 'Naukri', color: 'bg-orange-900/40 text-orange-300' },
   linkedin: { label: 'LinkedIn', color: 'bg-sky-900/40 text-sky-300' },
-  gmail: { label: 'Gmail', color: 'bg-zinc-900 text-zinc-500' },
-  manual: { label: 'Manual', color: 'bg-zinc-800 text-zinc-300' },
+  gmail: { label: 'Gmail', color: 'bg-red-950/40 text-red-400' },
+  manual: { label: 'Manual', color: 'bg-emerald-950/40 text-emerald-300' },
 }
 
 function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
@@ -95,10 +95,10 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
                 {src.label}
               </span>
               {!alert.isRead && (
-                <span className="w-2 h-2 rounded-full bg-zinc-500 flex-shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
               )}
               {alert.appliedJobId && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-950/40 text-emerald-300">
                   Applied
                 </span>
               )}
@@ -112,7 +112,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
               </p>
             )}
             {(alert.salaryMin || alert.salaryMax) && (
-              <p className="text-xs text-zinc-300 font-medium mt-1">
+              <p className="text-xs text-emerald-300 font-medium mt-1">
                 {alert.salaryMin && alert.salaryMax
                   ? `${alert.salaryMin}–${alert.salaryMax} LPA`
                   : `${alert.salaryMin ?? alert.salaryMax} LPA`}
@@ -199,7 +199,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
               <button
                 onClick={handleApply}
                 disabled={applying}
-                className="flex items-center gap-1 text-xs font-medium text-zinc-100 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-3 py-1 rounded-lg transition disabled:opacity-60"
+                className="flex items-center gap-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1 rounded-lg transition disabled:opacity-60"
               >
                 {applying ? <Loader2 size={12} className="animate-spin" /> : <Briefcase size={12} />}
                 Apply
@@ -292,7 +292,7 @@ export default function JobAlerts() {
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 rounded-xl text-sm font-medium disabled:opacity-60 transition"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium disabled:opacity-60 transition"
         >
           {syncing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
           {syncing ? 'Syncing…' : 'Sync Now'}
@@ -303,8 +303,8 @@ export default function JobAlerts() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {[
           { label: 'Total', value: data.total, color: 'text-zinc-50' },
-          { label: 'Unread', value: data.unreadCount, color: 'text-zinc-400' },
-          { label: 'Saved', value: data.savedCount, color: 'text-zinc-500' },
+          { label: 'Unread', value: data.unreadCount, color: 'text-blue-400' },
+          { label: 'Saved', value: data.savedCount, color: 'text-amber-400' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-zinc-900 rounded-2xl border border-zinc-800 p-4 text-center">
             <p className={`text-2xl font-bold ${color}`}>{value}</p>

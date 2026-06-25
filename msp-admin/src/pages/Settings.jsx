@@ -31,7 +31,7 @@ const TagInput = forwardRef(function TagInput({ value, onChange, placeholder }, 
   return (
     <div className="border border-zinc-800 rounded-xl p-2 flex flex-wrap gap-2 focus-within:ring-1 focus-within:ring-zinc-600 bg-zinc-900">
       {value.map(tag => (
-        <span key={tag} className="flex items-center gap-1 bg-zinc-800 text-zinc-300 text-xs font-medium px-2 py-1 rounded-lg border border-zinc-700">
+        <span key={tag} className="flex items-center gap-1 bg-indigo-950/40 text-indigo-300 text-xs font-medium px-2 py-1 rounded-lg border border-indigo-800/50">
           {tag}
           <button onClick={() => remove(tag)} className="hover:text-zinc-100"><X size={11} /></button>
         </span>
@@ -225,7 +225,7 @@ export default function Settings() {
             <button
               onClick={savePrefs}
               disabled={prefsSaving}
-              className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl text-sm font-medium border border-zinc-700 transition disabled:opacity-60"
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition disabled:opacity-60"
             >
               {prefsSaving
                 ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
@@ -257,10 +257,10 @@ export default function Settings() {
             {(gmail.accounts ?? []).length > 0 ? (
               <>
                 {gmail.accounts.map(account => (
-                  <div key={account.email} className="flex items-center gap-3 p-3 bg-zinc-800/50 border border-zinc-800 rounded-xl">
-                    <CheckCircle size={14} className="text-zinc-400 shrink-0" />
+                  <div key={account.email} className="flex items-center gap-3 p-3 bg-emerald-950/20 border border-emerald-800/30 rounded-xl">
+                    <CheckCircle size={14} className="text-emerald-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-zinc-200 truncate">{account.email}</p>
+                      <p className="text-sm font-medium text-emerald-200 truncate">{account.email}</p>
                       {account.lastSyncAt && (
                         <p className="text-xs text-zinc-500">Last sync: {new Date(account.lastSyncAt).toLocaleString()}</p>
                       )}
@@ -269,7 +269,7 @@ export default function Settings() {
                       <button
                         onClick={() => syncNow(account.email)}
                         disabled={syncing}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-lg text-xs font-medium disabled:opacity-60"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium disabled:opacity-60"
                       >
                         {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                         Sync
@@ -310,7 +310,7 @@ export default function Settings() {
                 <li>You can connect multiple accounts</li>
               </ul>
             </div>
-            <button onClick={connectGmail} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 rounded-xl text-sm font-medium transition">
+            <button onClick={connectGmail} className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition">
               <Plus size={15} /> Connect{(gmail.accounts ?? []).length > 0 ? ' Another' : ''} Gmail
             </button>
           </div>

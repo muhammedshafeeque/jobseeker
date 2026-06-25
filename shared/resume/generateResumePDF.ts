@@ -143,8 +143,8 @@ export const generateResumePDF = async (data: ResumeData = CANONICAL_RESUME): Pr
   const resume = withNpmStats(data, npmStats)
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
-  const primary: RGBColor = [41, 98, 255]
-  const secondary: RGBColor = [75, 85, 99]
+  const primary: RGBColor = [15, 15, 15]
+  const secondary: RGBColor = [80, 80, 80]
 
   let y = PAGE_MARGIN_TOP
   const { header } = resume

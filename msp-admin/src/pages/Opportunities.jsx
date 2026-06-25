@@ -12,10 +12,10 @@ const formatEmailDate = (d) =>
 // ── Match badge ──────────────────────────────────────────────────────────────
 const MATCH = [
   { label: 'Low',       bg: 'bg-zinc-900', text: 'text-zinc-600', dot: 'bg-zinc-700' },
-  { label: 'Fair',      bg: 'bg-zinc-900', text: 'text-zinc-500', dot: 'bg-zinc-600' },
-  { label: 'Good',      bg: 'bg-zinc-800', text: 'text-zinc-400', dot: 'bg-zinc-500' },
-  { label: 'Great',     bg: 'bg-zinc-800', text: 'text-zinc-300', dot: 'bg-zinc-400' },
-  { label: 'Excellent', bg: 'bg-zinc-700', text: 'text-zinc-100', dot: 'bg-zinc-300' },
+  { label: 'Fair',      bg: 'bg-amber-950/40',   text: 'text-amber-400',   dot: 'bg-amber-500'   },
+  { label: 'Good',      bg: 'bg-blue-950/40',    text: 'text-blue-400',    dot: 'bg-blue-500'    },
+  { label: 'Great',     bg: 'bg-emerald-950/40', text: 'text-emerald-400', dot: 'bg-emerald-500' },
+  { label: 'Excellent', bg: 'bg-emerald-900/60', text: 'text-emerald-200', dot: 'bg-emerald-400' },
 ]
 
 function MatchBadge({ score }) {
@@ -31,16 +31,16 @@ function MatchBadge({ score }) {
 // ── Status badge ─────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
   draft:        'bg-zinc-800 text-zinc-300',
-  applied:      'bg-zinc-900 text-zinc-400',
-  responded:    'bg-zinc-900 text-zinc-500',
-  phone_screen: 'bg-zinc-900 text-zinc-500',
+  applied:      'bg-blue-950/50 text-blue-300',
+  responded:    'bg-red-950/40 text-red-400',
+  phone_screen: 'bg-red-950/40 text-red-400',
   code_test:    'bg-orange-900/40 text-orange-300',
   interview_1:  'bg-zinc-800 text-zinc-300',
   interview_2:  'bg-zinc-800 text-zinc-300',
   interview_3:  'bg-zinc-800 text-zinc-300',
   offer:        'bg-zinc-800 text-zinc-200',
   accepted:     'bg-zinc-700 text-zinc-100',
-  rejected:     'bg-zinc-900 text-zinc-500',
+  rejected:     'bg-red-950/40 text-red-400',
   withdrawn:    'bg-zinc-800 text-zinc-400',
 }
 
@@ -56,10 +56,10 @@ function StatusBadge({ status }) {
 
 // ── Source chip ───────────────────────────────────────────────────────────────
 const SRC = {
-  indeed:  'bg-zinc-900 text-zinc-400',
+  indeed:  'bg-blue-950/50 text-blue-300',
   naukri:  'bg-orange-900/40 text-orange-300',
   linkedin:'bg-sky-900/40 text-sky-300',
-  gmail:   'bg-zinc-900 text-zinc-500',
+  gmail:   'bg-red-950/40 text-red-400',
   manual:  'bg-zinc-800 text-zinc-400',
 }
 
@@ -130,7 +130,7 @@ function EmailDrawer({ alertId, onClose }) {
                 <ExternalLink size={13} /> Open in Gmail
               </a>
             )}
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-200">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-emerald-200">
               <X size={18} />
             </button>
           </div>
@@ -299,7 +299,7 @@ export default function Opportunities() {
         <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-1 gap-1">
           {[['all','All'],['indeed','Indeed'],['naukri','Naukri'],['linkedin','LinkedIn'],['gmail','Gmail']].map(([v,l]) => (
             <button key={v} onClick={() => setSourceFilter(v)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${sourceFilter === v ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${sourceFilter === v ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>
               {l}
             </button>
           ))}
@@ -374,7 +374,7 @@ export default function Opportunities() {
                     {/* Experience needed */}
                     <td className="px-4 py-3 whitespace-nowrap text-xs">
                       {opp.experienceMin != null || opp.experienceMax != null ? (
-                        <span className="font-medium text-zinc-200">
+                        <span className="font-medium text-emerald-200">
                           {opp.experienceMin != null && opp.experienceMax != null
                             ? `${opp.experienceMin}–${opp.experienceMax} yrs`
                             : opp.experienceMin != null
@@ -386,7 +386,7 @@ export default function Opportunities() {
                     {/* Max Budget */}
                     <td className="px-4 py-3 whitespace-nowrap text-xs">
                       {opp.salaryMax || opp.salaryMin ? (
-                        <span className="font-semibold text-zinc-200">
+                        <span className="font-semibold text-emerald-200">
                           {opp.salaryMin && opp.salaryMax
                             ? `₹${opp.salaryMin}–${opp.salaryMax}L`
                             : opp.salaryMax
