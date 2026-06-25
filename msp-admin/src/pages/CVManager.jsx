@@ -832,7 +832,7 @@ export default function CVManager() {
   const TABS = [['profile','Profile'],['tailor','Tailor'],['ats','ATS Score'],['prep','Interview Prep'],['letter','Cover Letter'],['history','History']]
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {fileInput}
 
       {uploadMsg && (
@@ -843,19 +843,19 @@ export default function CVManager() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <h1 className="text-xl font-semibold text-zinc-100">CV Manager</h1>
-        <div className="flex border border-zinc-800 rounded-xl overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+        <h1 className="text-xl font-semibold text-zinc-100 shrink-0">CV Manager</h1>
+        <div className="flex border border-zinc-800 rounded-xl overflow-x-auto scrollbar-none">
           {TABS.map(([key, label]) => (
             <button key={key} onClick={() => setActiveTab(key)}
-              className={`px-3.5 py-1.5 text-xs font-medium transition whitespace-nowrap ${
+              className={`px-3 sm:px-3.5 py-1.5 text-xs font-medium transition whitespace-nowrap ${
                 activeTab === key ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-zinc-200'
               }`}>
               {label}
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:ml-auto">
           <button onClick={() => fileRef.current.click()} disabled={uploading} className={btn.sm}>
             {uploading ? <Loader2 size={12} className="animate-spin"/> : <Upload size={12}/>}
             {uploading ? 'Parsing…' : 'Upload PDF'}

@@ -80,7 +80,7 @@ function NewJobModal({ onClose, onCreated }) {
           <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300"><X size={16}/></button>
         </div>
         <form onSubmit={submit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1"><label className="text-xs text-zinc-500">Company *</label><input value={form.company} onChange={set('company')} required className={inp}/></div>
             <div className="space-y-1"><label className="text-xs text-zinc-500">Role *</label><input value={form.role} onChange={set('role')} required className={inp}/></div>
             <div className="space-y-1"><label className="text-xs text-zinc-500">Max Budget (INR)</label><input type="number" value={form.maxBudget} onChange={set('maxBudget')} className={inp}/></div>
@@ -179,10 +179,10 @@ function JobDetail({ app, onClose, onUpdate }) {
           )}
 
           {(app.maxBudget || app.askedBudget || app.jobUrl) && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 grid grid-cols-2 gap-3">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {app.maxBudget && <div><p className="text-xs text-zinc-600 mb-0.5">Max Budget</p><p className="text-sm font-medium text-zinc-200">{fmt(app.maxBudget)}</p></div>}
               {app.askedBudget && <div><p className="text-xs text-zinc-600 mb-0.5">My Ask</p><p className="text-sm font-medium text-zinc-200">{fmt(app.askedBudget)}</p></div>}
-              {app.jobUrl && <div className="col-span-2">
+              {app.jobUrl && <div className="sm:col-span-2">
                 <a href={app.jobUrl} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition truncate">
                   <ExternalLink size={10}/>{app.jobUrl}
@@ -191,7 +191,7 @@ function JobDetail({ app, onClose, onUpdate }) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-zinc-500 flex items-center gap-1"><Calendar size={10}/> Interview Date</label>
               <input type="datetime-local" value={interviewDate} onChange={e => setInterviewDate(e.target.value)} className={inp}/>
@@ -482,9 +482,9 @@ export default function JobTracker() {
   const followUpCount = apps.filter(needsFollowUp).length
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
+      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-xl font-semibold text-zinc-100">Job Tracker</h1>
           {followUpCount > 0 && (
             <span className="flex items-center gap-1 border border-amber-800/50 text-amber-400 text-xs px-2 py-0.5 rounded-full bg-amber-950/20">
@@ -497,12 +497,12 @@ export default function JobTracker() {
             <button onClick={() => setView('list')} className={`p-2 transition ${view==='list' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><LayoutList size={15}/></button>
             <button onClick={() => setView('kanban')} className={`p-2 transition ${view==='kanban' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><Columns size={15}/></button>
           </div>
-          <button onClick={() => setShowAnalytics(true)} className={btn.ghost}><BarChart2 size={14}/> Analytics</button>
+          <button onClick={() => setShowAnalytics(true)} className={btn.ghost}><BarChart2 size={14}/><span className="hidden sm:inline">Analytics</span></button>
           <button onClick={exportCsv} disabled={exporting} className={btn.ghost}>
-            {exporting ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>} Export
+            {exporting ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}<span className="hidden sm:inline">Export</span>
           </button>
           <button onClick={syncGmail} disabled={syncing} className={btn.ghost}>
-            <RefreshCw size={14} className={syncing?'animate-spin':''}/> {syncing?'Syncing…':'Gmail Sync'}
+            <RefreshCw size={14} className={syncing?'animate-spin':''}/><span className="hidden sm:inline">{syncing?'Syncing…':'Gmail Sync'}</span>
           </button>
           <button onClick={() => setShowNew(true)} className={btn.primary}><Plus size={15}/> New</button>
         </div>
@@ -539,9 +539,9 @@ export default function JobTracker() {
             <div className="space-y-1.5">
               {filtered.map(app => (
                 <button key={app._id} onClick={() => setSelected(app)}
-                  className="w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-2xl px-5 py-3.5 flex items-center gap-4 transition text-left group">
-                  <div className="w-9 h-9 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center shrink-0">
-                    <Building2 size={14} className="text-zinc-600 group-hover:text-zinc-400 transition"/>
+                  className="w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 flex items-center gap-3 sm:gap-4 transition text-left group">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center shrink-0">
+                    <Building2 size={13} className="text-zinc-600 group-hover:text-zinc-400 transition"/>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-zinc-200 truncate">{app.role}</p>
@@ -549,11 +549,11 @@ export default function JobTracker() {
                       {app.company}{app.location ? ` · ${app.location}` : ''}{app.appliedAt ? ` · ${daysAgo(app.appliedAt)}d ago` : ''}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     {needsFollowUp(app) && <AlertTriangle size={12} className="text-amber-500"/>}
-                    {app.askedBudget && <span className="text-xs text-zinc-700 hidden sm:block">{fmt(app.askedBudget)}</span>}
+                    {app.askedBudget && <span className="text-xs text-zinc-700 hidden md:block">{fmt(app.askedBudget)}</span>}
                     <StatusBadge status={app.status} size="xs"/>
-                    <ChevronRight size={13} className="text-zinc-800 group-hover:text-zinc-600 transition"/>
+                    <ChevronRight size={13} className="text-zinc-800 group-hover:text-zinc-600 transition hidden sm:block"/>
                   </div>
                 </button>
               ))}

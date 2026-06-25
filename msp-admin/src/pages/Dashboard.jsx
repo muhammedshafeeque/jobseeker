@@ -34,7 +34,7 @@ export default function Dashboard() {
   const interviewCount = (jbs.interview_1 || 0) + (jbs.interview_2 || 0) + (jbs.interview_3 || 0)
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <h1 className="text-xl font-semibold text-zinc-100">Dashboard</h1>
 
       {/* Follow-up alert */}
@@ -53,7 +53,7 @@ export default function Dashboard() {
       {/* Job stats */}
       <section>
         <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Job Applications</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
           <StatCard icon={<Briefcase size={18} className="text-blue-400" />} iconBg="bg-blue-950/50" label="Total" value={jobStats?.total} to="/jobs" />
           <StatCard icon={<TrendingUp size={18} className="text-violet-400" />} iconBg="bg-violet-950/50" label="Interviews" value={interviewCount} to="/jobs" />
           <StatCard icon={<Clock size={18} className="text-amber-400" />} iconBg="bg-amber-950/50" label="Applied / Awaiting" value={jbs.applied || 0} to="/jobs" />
@@ -65,7 +65,7 @@ export default function Dashboard() {
       {analytics && (
         <section>
           <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">This Week's Activity</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800">
               <p className="text-xs text-zinc-400 mb-1">Response Rate</p>
               <p className="text-2xl font-bold text-zinc-50">{analytics.responseRate}%</p>

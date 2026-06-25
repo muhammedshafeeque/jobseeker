@@ -277,30 +277,30 @@ export default function JobAlerts() {
   const totalPages = Math.ceil(data.total / 20)
 
   return (
-    <div className="p-8 w-full">
+    <div className="p-4 sm:p-6 lg:p-8 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center">
-            <Bell size={20} className="text-zinc-400" />
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-zinc-800 rounded-xl flex items-center justify-center shrink-0">
+            <Bell size={18} className="text-zinc-400" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-50">Job Alerts</h1>
-            <p className="text-sm text-zinc-400">Jobs matching your profile from Naukri, Indeed & LinkedIn</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-50">Job Alerts</h1>
+            <p className="text-xs sm:text-sm text-zinc-400 truncate">Jobs matching your profile from Naukri, Indeed & LinkedIn</p>
           </div>
         </div>
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium disabled:opacity-60 transition"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium disabled:opacity-60 transition shrink-0"
         >
           {syncing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-          {syncing ? 'Syncing…' : 'Sync Now'}
+          <span className="hidden sm:inline">{syncing ? 'Syncing…' : 'Sync Now'}</span>
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
         {[
           { label: 'Total', value: data.total, color: 'text-zinc-50' },
           { label: 'Unread', value: data.unreadCount, color: 'text-blue-400' },
