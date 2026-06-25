@@ -293,10 +293,24 @@ export class JobAlertController {
   static async updatePreferences(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).userId
+      const { expectedCTCMin, expectedCTCMax, ...rest } = req.body
+
+      const setFields: Record<string, unknown> = { ...rest, userId }
+      const unsetFields: Record<string, string> = {}
+
+      if (expectedCTCMin == null) unsetFields.expectedCTCMin = ''
+      else setFields.expectedCTCMin = expectedCTCMin
+
+      if (expectedCTCMax == null) unsetFields.expectedCTCMax = ''
+      else setFields.expectedCTCMax = expectedCTCMax
+
+      const update: Record<string, unknown> = { $set: setFields }
+      if (Object.keys(unsetFields).length) update.$unset = unsetFields
+
       const prefs = await UserPreferences.findOneAndUpdate(
         { userId },
-        { ...req.body, userId },
-        { upsert: true, new: true },
+        update,
+        { upsert: true, new: true, returnDocument: 'after' },
       )
       res.json(prefs)
     } catch (e) {

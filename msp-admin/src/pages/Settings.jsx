@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react'
+import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { Mail, CheckCircle, AlertCircle, RefreshCw, Trash2, Loader2, User, Plus, X } from 'lucide-react'
 import api from '../lib/api'
 
-function TagInput({ value, onChange, placeholder }) {
+const TagInput = forwardRef(function TagInput({ value, onChange, placeholder }, ref) {
   const [input, setInput] = useState('')
 
   const add = () => {
@@ -11,6 +12,19 @@ function TagInput({ value, onChange, placeholder }) {
     if (v && !value.includes(v)) onChange([...value, v])
     setInput('')
   }
+
+  // Flush any pending typed text synchronously before the parent reads state
+  useImperativeHandle(ref, () => ({
+    flush: () => {
+      const v = input.trim()
+      if (v && !value.includes(v)) {
+        flushSync(() => {
+          onChange([...value, v])
+          setInput('')
+        })
+      }
+    },
+  }))
 
   const remove = (tag) => onChange(value.filter(t => t !== tag))
 
@@ -34,7 +48,7 @@ function TagInput({ value, onChange, placeholder }) {
       )}
     </div>
   )
-}
+})
 
 export default function Settings() {
   const [params] = useSearchParams()
@@ -43,6 +57,7 @@ export default function Settings() {
 
   const [prefs, setPrefs] = useState(null)
   const [prefsSaving, setPrefsSaving] = useState(false)
+  const [prefsSaved, setPrefsSaved] = useState(false)
   const [prefsForm, setPrefsForm] = useState({
     skills: [],
     jobTitles: [],
@@ -51,6 +66,9 @@ export default function Settings() {
     expectedCTCMax: '',
     preferredLocations: [],
   })
+  const skillsRef = useRef()
+  const titlesRef = useRef()
+  const locationsRef = useRef()
 
   const loadGmail = () => api.get('/gmail/status').then(r => setGmail(r.data)).catch(() => {})
 
@@ -96,19 +114,28 @@ export default function Settings() {
   }
 
   const savePrefs = async () => {
+    // Flush any text typed but not yet added in each TagInput
+    skillsRef.current?.flush()
+    titlesRef.current?.flush()
+    locationsRef.current?.flush()
+
     setPrefsSaving(true)
     try {
       const payload = {
         ...prefsForm,
         experienceYears: Number(prefsForm.experienceYears) || 0,
-        expectedCTCMin: prefsForm.expectedCTCMin !== '' ? Number(prefsForm.expectedCTCMin) : undefined,
-        expectedCTCMax: prefsForm.expectedCTCMax !== '' ? Number(prefsForm.expectedCTCMax) : undefined,
+        expectedCTCMin: prefsForm.expectedCTCMin !== '' ? Number(prefsForm.expectedCTCMin) : null,
+        expectedCTCMax: prefsForm.expectedCTCMax !== '' ? Number(prefsForm.expectedCTCMax) : null,
       }
       const { data } = await api.put('/job-alerts/preferences', payload)
       setPrefs(data)
-    } catch (e) {
+      setPrefsSaved(true)
+      setTimeout(() => setPrefsSaved(false), 2500)
+    } catch {
       alert('Failed to save preferences')
-    } finally { setPrefsSaving(false) }
+    } finally {
+      setPrefsSaving(false)
+    }
   }
 
   return (
@@ -134,6 +161,7 @@ export default function Settings() {
             <div>
               <label className="text-xs font-medium text-zinc-300 block mb-1.5">Job Titles to Search</label>
               <TagInput
+                ref={titlesRef}
                 value={prefsForm.jobTitles}
                 onChange={v => setPrefsForm(f => ({ ...f, jobTitles: v }))}
                 placeholder="React Developer, Frontend Engineer…"
@@ -144,6 +172,7 @@ export default function Settings() {
             <div>
               <label className="text-xs font-medium text-zinc-300 block mb-1.5">Skills</label>
               <TagInput
+                ref={skillsRef}
                 value={prefsForm.skills}
                 onChange={v => setPrefsForm(f => ({ ...f, skills: v }))}
                 placeholder="React, TypeScript, Node.js…"
@@ -153,6 +182,7 @@ export default function Settings() {
             <div>
               <label className="text-xs font-medium text-zinc-300 block mb-1.5">Preferred Locations</label>
               <TagInput
+                ref={locationsRef}
                 value={prefsForm.preferredLocations}
                 onChange={v => setPrefsForm(f => ({ ...f, preferredLocations: v }))}
                 placeholder="Bangalore, Remote, Mumbai…"
@@ -166,7 +196,7 @@ export default function Settings() {
                   type="number"
                   value={prefsForm.experienceYears}
                   onChange={e => setPrefsForm(f => ({ ...f, experienceYears: e.target.value }))}
-                  className="w-full border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   min={0}
                 />
               </div>
@@ -177,7 +207,7 @@ export default function Settings() {
                   value={prefsForm.expectedCTCMin}
                   onChange={e => setPrefsForm(f => ({ ...f, expectedCTCMin: e.target.value }))}
                   placeholder="e.g. 15"
-                  className="w-full border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -187,7 +217,7 @@ export default function Settings() {
                   value={prefsForm.expectedCTCMax}
                   onChange={e => setPrefsForm(f => ({ ...f, expectedCTCMax: e.target.value }))}
                   placeholder="e.g. 30"
-                  className="w-full border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -197,8 +227,12 @@ export default function Settings() {
               disabled={prefsSaving}
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition disabled:opacity-60"
             >
-              {prefsSaving ? <Loader2 size={14} className="animate-spin" /> : null}
-              {prefsSaving ? 'Saving…' : 'Save Preferences'}
+              {prefsSaving
+                ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
+                : prefsSaved
+                  ? <><CheckCircle size={14} /> Saved!</>
+                  : 'Save Preferences'
+              }
             </button>
           </div>
         )}
