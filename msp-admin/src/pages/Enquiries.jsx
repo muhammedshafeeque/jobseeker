@@ -4,11 +4,11 @@ import api from '../lib/api'
 import socket from '../lib/socket'
 
 const STATUSES = [
-  { value: 'unread',           label: 'Unread',           color: 'bg-red-900/40 text-red-300' },
-  { value: 'viewed',           label: 'Viewed',           color: 'bg-blue-900/40 text-blue-300' },
-  { value: 'connected',        label: 'Connected',        color: 'bg-purple-900/40 text-purple-300' },
+  { value: 'unread',           label: 'Unread',           color: 'bg-zinc-900 text-zinc-400' },
+  { value: 'viewed',           label: 'Viewed',           color: 'bg-zinc-900 text-zinc-300' },
+  { value: 'connected',        label: 'Connected',        color: 'bg-zinc-900 text-zinc-400' },
   { value: 'application_sent', label: 'Application Sent', color: 'bg-teal-900/40 text-teal-300' },
-  { value: 'mail_sent',        label: 'Mail Sent',        color: 'bg-indigo-900/40 text-indigo-300' },
+  { value: 'mail_sent',        label: 'Mail Sent',        color: 'bg-zinc-900 text-zinc-500' },
   { value: 'closed',           label: 'Closed',           color: 'bg-zinc-800 text-zinc-400' },
 ]
 
@@ -44,10 +44,10 @@ function EnquiryDetail({ item, onClose, onUpdate }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-zinc-900 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-zinc-700/60">
+        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
           <div>
             <h2 className="font-bold text-zinc-50">{item.name}</h2>
-            <a href={`mailto:${item.email}`} className="text-sm text-blue-400 hover:underline">{item.email}</a>
+            <a href={`mailto:${item.email}`} className="text-sm text-zinc-400 hover:text-zinc-200 hover:underline">{item.email}</a>
             {item.phone && (
               <a href={`tel:${item.phone}`} className="block text-xs text-zinc-400 hover:text-zinc-200 mt-0.5">{item.phone}</a>
             )}
@@ -65,15 +65,15 @@ function EnquiryDetail({ item, onClose, onUpdate }) {
             <div className="flex gap-2 flex-wrap mb-2">
               {STATUSES.map(s => (
                 <button key={s.value} onClick={() => setStatus(s.value)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${status === s.value ? 'ring-2 ring-blue-500 ' + s.color : 'border-zinc-700/60 text-zinc-300 hover:bg-zinc-950'}`}>
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${status === s.value ? 'ring-1 ring-zinc-600 ' + s.color : 'border-zinc-800 text-zinc-300 hover:bg-zinc-950'}`}>
                   {s.label}
                 </button>
               ))}
             </div>
             <div className="flex gap-2">
               <input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional note…"
-                className="flex-1 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <button onClick={updateStatus} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium disabled:opacity-60 flex items-center gap-1.5">
+                className="flex-1 border border-zinc-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-600" />
+              <button onClick={updateStatus} disabled={saving} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 rounded-xl text-sm font-medium disabled:opacity-60 flex items-center gap-1.5">
                 {saving && <Loader2 size={13} className="animate-spin" />} Save
               </button>
             </div>
@@ -97,7 +97,7 @@ function EnquiryDetail({ item, onClose, onUpdate }) {
           <div>
             <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">Admin Note</p>
             <textarea value={adminNote} onChange={e => setAdminNote(e.target.value)} rows={3}
-              className="w-full border border-zinc-700/60 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" />
+              className="w-full border border-zinc-800 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-zinc-600 mb-2" />
             <button onClick={saveNote} disabled={savingNote} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium disabled:opacity-60 flex items-center gap-1.5">
               {savingNote && <Loader2 size={13} className="animate-spin" />} Save Note
             </button>
@@ -131,13 +131,13 @@ export default function Enquiries() {
       </div>
 
       <div className="flex gap-2 flex-wrap mb-6">
-        <button onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${filter === 'all' ? 'bg-zinc-700 text-zinc-50' : 'border border-zinc-700/60 text-zinc-300 hover:bg-zinc-950'}`}>All ({items.length})</button>
+        <button onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${filter === 'all' ? 'bg-zinc-700 text-zinc-50' : 'border border-zinc-800 text-zinc-300 hover:bg-zinc-950'}`}>All ({items.length})</button>
         {STATUSES.map(s => {
           const count = items.filter(i => i.status === s.value).length
           if (count === 0) return null
           return (
             <button key={s.value} onClick={() => setFilter(s.value)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${filter === s.value ? s.color + ' ring-2 ring-blue-500/50' : 'border border-zinc-700/60 text-zinc-300 hover:bg-zinc-950'}`}>
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${filter === s.value ? s.color + ' ring-1 ring-zinc-500' : 'border border-zinc-800 text-zinc-300 hover:bg-zinc-950'}`}>
               {s.label} ({count})
             </button>
           )
@@ -153,7 +153,7 @@ export default function Enquiries() {
         <div className="space-y-2">
           {filtered.map(item => (
             <button key={item._id} onClick={() => setSelected(item)}
-              className="w-full bg-zinc-900 border border-zinc-700/60 rounded-2xl px-5 py-4 flex items-center gap-4 hover:shadow-md hover:border-blue-800 transition text-left">
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-4 flex items-center gap-4 hover:shadow-md hover:border-zinc-600 transition text-left">
               <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center flex-shrink-0">
                 <span className="text-lg">👤</span>
               </div>

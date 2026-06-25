@@ -11,11 +11,11 @@ const formatEmailDate = (d) =>
 
 // ── Match badge ──────────────────────────────────────────────────────────────
 const MATCH = [
-  { label: 'Low',       bg: 'bg-zinc-800',   text: 'text-zinc-400',  dot: 'bg-zinc-500'  },
-  { label: 'Fair',      bg: 'bg-amber-900/20',    text: 'text-amber-400',  dot: 'bg-amber-400'  },
-  { label: 'Good',      bg: 'bg-blue-900/20',     text: 'text-blue-400',   dot: 'bg-blue-500'   },
-  { label: 'Great',     bg: 'bg-emerald-900/20',  text: 'text-emerald-400',dot: 'bg-emerald-500'},
-  { label: 'Excellent', bg: 'bg-emerald-900/40', text: 'text-emerald-300',dot: 'bg-emerald-600'},
+  { label: 'Low',       bg: 'bg-zinc-900', text: 'text-zinc-600', dot: 'bg-zinc-700' },
+  { label: 'Fair',      bg: 'bg-zinc-900', text: 'text-zinc-500', dot: 'bg-zinc-600' },
+  { label: 'Good',      bg: 'bg-zinc-800', text: 'text-zinc-400', dot: 'bg-zinc-500' },
+  { label: 'Great',     bg: 'bg-zinc-800', text: 'text-zinc-300', dot: 'bg-zinc-400' },
+  { label: 'Excellent', bg: 'bg-zinc-700', text: 'text-zinc-100', dot: 'bg-zinc-300' },
 ]
 
 function MatchBadge({ score }) {
@@ -31,16 +31,16 @@ function MatchBadge({ score }) {
 // ── Status badge ─────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
   draft:        'bg-zinc-800 text-zinc-300',
-  applied:      'bg-blue-900/40 text-blue-300',
-  responded:    'bg-violet-900/40 text-violet-300',
-  phone_screen: 'bg-purple-900/40 text-purple-300',
+  applied:      'bg-zinc-900 text-zinc-400',
+  responded:    'bg-zinc-900 text-zinc-500',
+  phone_screen: 'bg-zinc-900 text-zinc-500',
   code_test:    'bg-orange-900/40 text-orange-300',
-  interview_1:  'bg-amber-900/40 text-amber-300',
-  interview_2:  'bg-amber-900/40 text-amber-300',
-  interview_3:  'bg-amber-900/40 text-amber-300',
-  offer:        'bg-emerald-900/40 text-emerald-300',
-  accepted:     'bg-emerald-900/60 text-emerald-200',
-  rejected:     'bg-red-900/40 text-red-300',
+  interview_1:  'bg-zinc-800 text-zinc-300',
+  interview_2:  'bg-zinc-800 text-zinc-300',
+  interview_3:  'bg-zinc-800 text-zinc-300',
+  offer:        'bg-zinc-800 text-zinc-200',
+  accepted:     'bg-zinc-700 text-zinc-100',
+  rejected:     'bg-zinc-900 text-zinc-500',
   withdrawn:    'bg-zinc-800 text-zinc-400',
 }
 
@@ -56,10 +56,10 @@ function StatusBadge({ status }) {
 
 // ── Source chip ───────────────────────────────────────────────────────────────
 const SRC = {
-  indeed:  'bg-blue-900/40 text-blue-300',
+  indeed:  'bg-zinc-900 text-zinc-400',
   naukri:  'bg-orange-900/40 text-orange-300',
   linkedin:'bg-sky-900/40 text-sky-300',
-  gmail:   'bg-red-900/40 text-red-300',
+  gmail:   'bg-zinc-900 text-zinc-500',
   manual:  'bg-zinc-800 text-zinc-400',
 }
 
@@ -102,7 +102,7 @@ function EmailDrawer({ alertId, onClose }) {
       {/* Drawer */}
       <div className="w-[600px] max-w-full bg-zinc-900 shadow-2xl flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 p-5 border-b border-zinc-700/60">
+        <div className="flex items-start justify-between gap-3 p-5 border-b border-zinc-800">
           <div className="flex-1 min-w-0">
             {alert ? (
               <>
@@ -120,13 +120,13 @@ function EmailDrawer({ alertId, onClose }) {
             ) : alert === null ? (
               <div className="flex items-center gap-2 text-zinc-500 text-sm"><Loader2 size={14} className="animate-spin" /> Loading…</div>
             ) : (
-              <p className="text-sm text-red-500">Failed to load email</p>
+              <p className="text-sm text-zinc-500">Failed to load email</p>
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {alert?.url && (
               <a href={alert.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-zinc-400 hover:text-blue-400 px-2 py-1.5 rounded-lg hover:bg-blue-900/20 transition">
+                className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 px-2 py-1.5 rounded-lg hover:bg-zinc-800 transition">
                 <ExternalLink size={13} /> Open in Gmail
               </a>
             )}
@@ -170,8 +170,8 @@ function useSortedData(rows) {
 function SortIcon({ col, sort }) {
   if (sort.col !== col) return <ChevronUp size={12} className="text-zinc-600" />
   return sort.dir === 'asc'
-    ? <ChevronUp size={12} className="text-blue-500" />
-    : <ChevronDown size={12} className="text-blue-500" />
+    ? <ChevronUp size={12} className="text-zinc-400" />
+    : <ChevronDown size={12} className="text-zinc-400" />
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -269,8 +269,8 @@ export default function Opportunities() {
       {/* Header */}
       <div className="px-8 pt-8 pb-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-900/20 rounded-xl flex items-center justify-center">
-            <TrendingUp size={20} className="text-emerald-400" />
+          <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center">
+            <TrendingUp size={20} className="text-zinc-400" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-zinc-50">Opportunities</h1>
@@ -287,7 +287,7 @@ export default function Opportunities() {
       {/* Filters */}
       <div className="px-8 pb-4 flex items-center gap-3 flex-shrink-0 flex-wrap">
         {/* Status filter */}
-        <div className="flex bg-zinc-900 border border-zinc-700/60 rounded-xl p-1 gap-1">
+        <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-1 gap-1">
           {[['all','All'],['not_applied','Not Applied'],['applied','Applied']].map(([v,l]) => (
             <button key={v} onClick={() => setStatusFilter(v)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${statusFilter === v ? 'bg-zinc-700 text-zinc-50' : 'text-zinc-400 hover:text-zinc-200'}`}>
@@ -296,10 +296,10 @@ export default function Opportunities() {
           ))}
         </div>
         {/* Source filter */}
-        <div className="flex bg-zinc-900 border border-zinc-700/60 rounded-xl p-1 gap-1">
+        <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-1 gap-1">
           {[['all','All'],['indeed','Indeed'],['naukri','Naukri'],['linkedin','LinkedIn'],['gmail','Gmail']].map(([v,l]) => (
             <button key={v} onClick={() => setSourceFilter(v)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${sourceFilter === v ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${sourceFilter === v ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'}`}>
               {l}
             </button>
           ))}
@@ -311,7 +311,7 @@ export default function Opportunities() {
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 size={24} className="animate-spin text-zinc-500" /></div>
         ) : sorted.length === 0 ? (
-          <div className="text-center py-20 bg-zinc-900 rounded-2xl border border-zinc-700/60">
+          <div className="text-center py-20 bg-zinc-900 rounded-2xl border border-zinc-800">
             <TrendingUp size={32} className="text-zinc-600 mx-auto mb-3" />
             <p className="text-zinc-400 font-medium">No opportunities yet</p>
             <p className="text-zinc-500 text-sm mt-1">
@@ -321,10 +321,10 @@ export default function Opportunities() {
             </p>
           </div>
         ) : (
-          <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 overflow-hidden">
+          <div className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="border-b border-zinc-700/60 bg-zinc-950">
+                <tr className="border-b border-zinc-800 bg-zinc-950">
                   {columns.map(col => (
                     <th key={col.key}
                       className={`px-4 py-3 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wide whitespace-nowrap ${col.sortable ? 'cursor-pointer select-none hover:text-zinc-100' : ''}`}
@@ -386,7 +386,7 @@ export default function Opportunities() {
                     {/* Max Budget */}
                     <td className="px-4 py-3 whitespace-nowrap text-xs">
                       {opp.salaryMax || opp.salaryMin ? (
-                        <span className="font-semibold text-emerald-300">
+                        <span className="font-semibold text-zinc-200">
                           {opp.salaryMin && opp.salaryMax
                             ? `₹${opp.salaryMin}–${opp.salaryMax}L`
                             : opp.salaryMax
@@ -406,7 +406,7 @@ export default function Opportunities() {
                         <button
                           onClick={() => handleDownloadCv(opp)}
                           disabled={downloading[`${opp._id}-cv`]}
-                          className="p-1.5 rounded-lg hover:bg-indigo-900/20 hover:text-indigo-400 text-zinc-400 transition disabled:opacity-40"
+                          className="p-1.5 rounded-lg hover:bg-zinc-800 hover:text-zinc-300 text-zinc-400 transition disabled:opacity-40"
                           title="Download matching CV">
                           {downloading[`${opp._id}-cv`]
                             ? <Loader2 size={14} className="animate-spin" />
@@ -416,7 +416,7 @@ export default function Opportunities() {
                         <button
                           onClick={() => handleDownloadCoverLetter(opp)}
                           disabled={downloading[`${opp._id}-cl`]}
-                          className="p-1.5 rounded-lg hover:bg-violet-900/20 hover:text-violet-600 text-zinc-400 transition disabled:opacity-40"
+                          className="p-1.5 rounded-lg hover:bg-zinc-800 hover:text-zinc-300 text-zinc-400 transition disabled:opacity-40"
                           title="Download cover letter">
                           {downloading[`${opp._id}-cl`]
                             ? <Loader2 size={14} className="animate-spin" />
@@ -424,7 +424,7 @@ export default function Opportunities() {
                         </button>
                         {/* View email */}
                         <button onClick={() => setDrawerAlertId(opp._id)}
-                          className="p-1.5 rounded-lg hover:bg-blue-900/20 hover:text-blue-400 text-zinc-400 transition"
+                          className="p-1.5 rounded-lg hover:bg-zinc-800 hover:text-zinc-300 text-zinc-400 transition"
                           title="View email">
                           <Mail size={14} />
                         </button>
@@ -439,14 +439,14 @@ export default function Opportunities() {
                         {/* Apply */}
                         {!opp.appliedJobId && (
                           <button onClick={() => handleApply(opp)}
-                            className="p-1.5 rounded-lg hover:bg-emerald-900/20 hover:text-emerald-300 text-zinc-500 transition"
+                            className="p-1.5 rounded-lg hover:bg-zinc-800 hover:text-zinc-300 text-zinc-500 transition"
                             title="Create application">
                             <Briefcase size={14} />
                           </button>
                         )}
                         {/* Dismiss */}
                         <button onClick={() => handleDismiss(opp._id)}
-                          className="p-1.5 rounded-lg hover:bg-red-900/20 hover:text-red-500 text-zinc-500 transition"
+                          className="p-1.5 rounded-lg hover:bg-zinc-800 hover:text-zinc-400 text-zinc-500 transition"
                           title="Dismiss">
                           <X size={14} />
                         </button>

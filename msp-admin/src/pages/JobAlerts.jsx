@@ -49,10 +49,10 @@ function EmailIframe({ html }) {
 }
 
 const SOURCE_LABELS = {
-  indeed: { label: 'Indeed', color: 'bg-blue-900/40 text-blue-300' },
+  indeed: { label: 'Indeed', color: 'bg-zinc-900 text-zinc-400' },
   naukri: { label: 'Naukri', color: 'bg-orange-900/40 text-orange-300' },
   linkedin: { label: 'LinkedIn', color: 'bg-sky-900/40 text-sky-300' },
-  gmail: { label: 'Gmail', color: 'bg-red-900/40 text-red-300' },
+  gmail: { label: 'Gmail', color: 'bg-zinc-900 text-zinc-500' },
   manual: { label: 'Manual', color: 'bg-zinc-800 text-zinc-300' },
 }
 
@@ -83,7 +83,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
   return (
     <div
       className={`bg-zinc-900 rounded-2xl border transition ${
-        alert.isRead ? 'border-zinc-700/60' : 'border-blue-700/50 shadow-sm'
+        alert.isRead ? 'border-zinc-800' : 'border-zinc-700 shadow-sm'
       }`}
       onClick={handleCardClick}
     >
@@ -95,10 +95,10 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
                 {src.label}
               </span>
               {!alert.isRead && (
-                <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-zinc-500 flex-shrink-0" />
               )}
               {alert.appliedJobId && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-300">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300">
                   Applied
                 </span>
               )}
@@ -112,7 +112,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
               </p>
             )}
             {(alert.salaryMin || alert.salaryMax) && (
-              <p className="text-xs text-emerald-300 font-medium mt-1">
+              <p className="text-xs text-zinc-300 font-medium mt-1">
                 {alert.salaryMin && alert.salaryMax
                   ? `${alert.salaryMin}–${alert.salaryMax} LPA`
                   : `${alert.salaryMin ?? alert.salaryMax} LPA`}
@@ -124,7 +124,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
               onClick={e => { e.stopPropagation(); onSave(alert._id) }}
               className={`p-1.5 rounded-lg transition ${
                 alert.isSaved
-                  ? 'text-amber-500 hover:bg-amber-900/20'
+                  ? 'text-zinc-500 hover:bg-zinc-800'
                   : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300'
               }`}
               title={alert.isSaved ? 'Unsave' : 'Save'}
@@ -133,7 +133,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
             </button>
             <button
               onClick={e => { e.stopPropagation(); onDismiss(alert._id) }}
-              className="p-1.5 rounded-lg text-zinc-500 hover:bg-red-900/20 hover:text-red-500 transition"
+              className="p-1.5 rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-zinc-400 transition"
               title="Dismiss"
             >
               <X size={15} />
@@ -154,7 +154,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
 
             {/* Expanded: HTML iframe if available, else plain text */}
             {expanded && (
-              <div className="border border-zinc-700/60 rounded-xl overflow-hidden bg-zinc-900">
+              <div className="border border-zinc-800 rounded-xl overflow-hidden bg-zinc-900">
                 {hasHtml
                   ? <EmailIframe html={alert.htmlBody} />
                   : (
@@ -169,7 +169,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
             {hasMore && (
               <button
                 onClick={() => setExpanded(e => !e)}
-                className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 mt-1.5 px-1"
+                className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 mt-1.5 px-1"
               >
                 {expanded
                   ? <><ChevronUp size={12} /> Collapse</>
@@ -190,7 +190,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
                 href={alert.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-zinc-400 hover:text-blue-400 px-2 py-1 rounded-lg hover:bg-blue-900/20 transition"
+                className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 px-2 py-1 rounded-lg hover:bg-zinc-800 transition"
               >
                 <ExternalLink size={12} /> View in Gmail
               </a>
@@ -199,7 +199,7 @@ function AlertCard({ alert, onRead, onSave, onDismiss, onApply }) {
               <button
                 onClick={handleApply}
                 disabled={applying}
-                className="flex items-center gap-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg transition disabled:opacity-60"
+                className="flex items-center gap-1 text-xs font-medium text-zinc-100 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-3 py-1 rounded-lg transition disabled:opacity-60"
               >
                 {applying ? <Loader2 size={12} className="animate-spin" /> : <Briefcase size={12} />}
                 Apply
@@ -281,8 +281,8 @@ export default function JobAlerts() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-900/20 rounded-xl flex items-center justify-center">
-            <Bell size={20} className="text-blue-400" />
+          <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center">
+            <Bell size={20} className="text-zinc-400" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-zinc-50">Job Alerts</h1>
@@ -292,7 +292,7 @@ export default function JobAlerts() {
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium disabled:opacity-60 transition"
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 rounded-xl text-sm font-medium disabled:opacity-60 transition"
         >
           {syncing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
           {syncing ? 'Syncing…' : 'Sync Now'}
@@ -303,10 +303,10 @@ export default function JobAlerts() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {[
           { label: 'Total', value: data.total, color: 'text-zinc-50' },
-          { label: 'Unread', value: data.unreadCount, color: 'text-blue-400' },
-          { label: 'Saved', value: data.savedCount, color: 'text-amber-400' },
+          { label: 'Unread', value: data.unreadCount, color: 'text-zinc-400' },
+          { label: 'Saved', value: data.savedCount, color: 'text-zinc-500' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-4 text-center">
+          <div key={label} className="bg-zinc-900 rounded-2xl border border-zinc-800 p-4 text-center">
             <p className={`text-2xl font-bold ${color}`}>{value}</p>
             <p className="text-xs text-zinc-400 mt-1">{label}</p>
           </div>
@@ -352,7 +352,7 @@ export default function JobAlerts() {
           <Loader2 size={24} className="animate-spin text-zinc-500" />
         </div>
       ) : data.alerts.length === 0 ? (
-        <div className="text-center py-16 bg-zinc-900 rounded-2xl border border-zinc-700/60">
+        <div className="text-center py-16 bg-zinc-900 rounded-2xl border border-zinc-800">
           <Bell size={32} className="text-zinc-600 mx-auto mb-3" />
           <p className="text-zinc-400 font-medium">No alerts yet</p>
           <p className="text-zinc-500 text-sm mt-1">
@@ -380,7 +380,7 @@ export default function JobAlerts() {
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="p-2 rounded-xl border border-zinc-700/60 hover:bg-zinc-950 disabled:opacity-40 transition"
+            className="p-2 rounded-xl border border-zinc-800 hover:bg-zinc-950 disabled:opacity-40 transition"
           >
             <ChevronLeft size={16} />
           </button>
@@ -390,7 +390,7 @@ export default function JobAlerts() {
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="p-2 rounded-xl border border-zinc-700/60 hover:bg-zinc-950 disabled:opacity-40 transition"
+            className="p-2 rounded-xl border border-zinc-800 hover:bg-zinc-950 disabled:opacity-40 transition"
           >
             <ChevronRight size={16} />
           </button>

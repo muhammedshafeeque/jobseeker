@@ -55,6 +55,19 @@ Return ONLY valid JSON:
 
 Be specific and actionable. Base everything strictly on the provided resume and JD.`
 
+const ATS_FRIENDLY_SYSTEM = `You rewrite a candidate's resume JSON to maximise ATS (Applicant Tracking System) compatibility for a specific job.
+
+RULES — follow ALL exactly:
+1. Return ONLY valid JSON using the EXACT same schema as the input resume
+2. PRESERVE: all header fields (name, email, phone, links), every company name, every job title, all employment and education dates, certifications, awards, footerNote
+3. REWRITE the professional summary: first sentence must name the exact target job title and mention 2-3 key JD requirements
+4. REWRITE every bullet point: begin with a strong action verb (Led, Built, Engineered, Delivered, Reduced, Increased…), integrate JD keywords where factually supported by existing experience, add quantification where the original implies measurement
+5. REORDER coreSkills so JD-required skills appear first; use the JD's exact terminology (e.g. "Node.js" not "NodeJS" if the JD writes "Node.js")
+6. Keep exactly the same count of summary paragraphs and bullets per role — no additions or deletions
+7. NEVER invent employers, metrics, projects, technologies, or dates not present or implied in the original resume
+
+Return the complete optimised resume JSON object.`
+
 const INTERVIEW_PREP_SYSTEM = `You generate targeted interview preparation based on a candidate's resume and job description.
 
 Return ONLY valid JSON:
@@ -361,6 +374,47 @@ export class CVController {
       })
       const raw = completion.choices[0]?.message?.content ?? '{}'
       res.json(JSON.parse(raw))
+    } catch (e) { next(e) }
+  }
+
+  static async atsScoreFromFile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { jd } = req.body
+      if (!jd?.trim()) throw { status: 400, message: 'Job description is required' }
+      if (!req.file) throw { status: 400, message: 'CV file is required' }
+      const rawText = await extractText(req.file.buffer, req.file.mimetype, req.file.originalname)
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1500,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: ATS_SYSTEM },
+          { role: 'user', content: `${INJECTION_GUARD}RESUME (plain text):\n${rawText.slice(0, 12000)}\n\n---\nJOB DESCRIPTION:\n${jd}` },
+        ],
+      })
+      const raw = completion.choices[0]?.message?.content ?? '{}'
+      res.json(JSON.parse(raw))
+    } catch (e) { next(e) }
+  }
+
+  static async generateAtsFriendly(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const { jd } = req.body
+      if (!jd?.trim()) throw { status: 400, message: 'Job description is required' }
+      const base = await getUserCV(userId)
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 4096,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: ATS_FRIENDLY_SYSTEM },
+          { role: 'user', content: `${INJECTION_GUARD}ORIGINAL RESUME:\n${JSON.stringify(base, null, 2)}\n\n---\nTARGET JOB DESCRIPTION:\n${jd}` },
+        ],
+      })
+      const raw = completion.choices[0]?.message?.content ?? '{}'
+      const optimised = { ...base, ...parseResumeJson(raw), header: base.header }
+      res.json({ profileData: optimised })
     } catch (e) { next(e) }
   }
 

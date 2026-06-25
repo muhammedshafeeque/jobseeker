@@ -29,11 +29,11 @@ const TagInput = forwardRef(function TagInput({ value, onChange, placeholder }, 
   const remove = (tag) => onChange(value.filter(t => t !== tag))
 
   return (
-    <div className="border border-zinc-700/60 rounded-xl p-2 flex flex-wrap gap-2 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-zinc-900">
+    <div className="border border-zinc-800 rounded-xl p-2 flex flex-wrap gap-2 focus-within:ring-1 focus-within:ring-zinc-600 bg-zinc-900">
       {value.map(tag => (
-        <span key={tag} className="flex items-center gap-1 bg-blue-900/20 text-blue-300 text-xs font-medium px-2 py-1 rounded-lg">
+        <span key={tag} className="flex items-center gap-1 bg-zinc-800 text-zinc-300 text-xs font-medium px-2 py-1 rounded-lg border border-zinc-700">
           {tag}
-          <button onClick={() => remove(tag)} className="hover:text-red-500"><X size={11} /></button>
+          <button onClick={() => remove(tag)} className="hover:text-zinc-100"><X size={11} /></button>
         </span>
       ))}
       <input
@@ -41,10 +41,10 @@ const TagInput = forwardRef(function TagInput({ value, onChange, placeholder }, 
         onChange={e => setInput(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add() } }}
         placeholder={placeholder}
-        className="flex-1 min-w-[120px] text-sm outline-none bg-transparent text-zinc-200 placeholder-zinc-500"
+        className="flex-1 min-w-[120px] text-sm outline-none bg-transparent text-zinc-200 placeholder-zinc-600"
       />
       {input.trim() && (
-        <button onClick={add} className="text-blue-400 hover:text-blue-300"><Plus size={15} /></button>
+        <button onClick={add} className="text-zinc-500 hover:text-zinc-200"><Plus size={15} /></button>
       )}
     </div>
   )
@@ -140,16 +140,16 @@ export default function Settings() {
 
   return (
     <div className="p-8 max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold text-zinc-50">Settings</h1>
+      <h1 className="text-xl font-semibold text-zinc-100">Settings</h1>
 
       {/* Job Alert Preferences */}
-      <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-6">
+      <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 bg-blue-900/20 rounded-xl flex items-center justify-center">
-            <User size={20} className="text-blue-400" />
+          <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center">
+            <User size={18} className="text-zinc-400" />
           </div>
           <div>
-            <h2 className="font-semibold text-zinc-50">Job Alert Preferences</h2>
+            <h2 className="font-medium text-zinc-100">Job Alert Preferences</h2>
             <p className="text-sm text-zinc-400">Used to fetch matching jobs from Indeed, Naukri & LinkedIn</p>
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function Settings() {
                   type="number"
                   value={prefsForm.experienceYears}
                   onChange={e => setPrefsForm(f => ({ ...f, experienceYears: e.target.value }))}
-                  className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
                   min={0}
                 />
               </div>
@@ -207,7 +207,7 @@ export default function Settings() {
                   value={prefsForm.expectedCTCMin}
                   onChange={e => setPrefsForm(f => ({ ...f, expectedCTCMin: e.target.value }))}
                   placeholder="e.g. 15"
-                  className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
                 />
               </div>
               <div>
@@ -217,7 +217,7 @@ export default function Settings() {
                   value={prefsForm.expectedCTCMax}
                   onChange={e => setPrefsForm(f => ({ ...f, expectedCTCMax: e.target.value }))}
                   placeholder="e.g. 30"
-                  className="w-full bg-zinc-800 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-600"
                 />
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function Settings() {
             <button
               onClick={savePrefs}
               disabled={prefsSaving}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition disabled:opacity-60"
+              className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl text-sm font-medium border border-zinc-700 transition disabled:opacity-60"
             >
               {prefsSaving
                 ? <><Loader2 size={14} className="animate-spin" /> Saving…</>
@@ -239,13 +239,13 @@ export default function Settings() {
       </div>
 
       {/* Gmail */}
-      <div className="bg-zinc-900 rounded-2xl border border-zinc-700/60 p-6">
+      <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 bg-red-900/20 rounded-xl flex items-center justify-center">
-            <Mail size={20} className="text-red-500" />
+          <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center">
+            <Mail size={18} className="text-zinc-400" />
           </div>
           <div>
-            <h2 className="font-semibold text-zinc-50">Gmail Integration</h2>
+            <h2 className="font-medium text-zinc-100">Gmail Integration</h2>
             <p className="text-sm text-zinc-400">Scan inbox for interview invites, assessments, offers — and update job tracker automatically</p>
           </div>
         </div>
@@ -257,10 +257,10 @@ export default function Settings() {
             {(gmail.accounts ?? []).length > 0 ? (
               <>
                 {gmail.accounts.map(account => (
-                  <div key={account.email} className="flex items-center gap-3 p-3 bg-emerald-900/10 border border-emerald-800/30 rounded-xl">
-                    <CheckCircle size={15} className="text-emerald-400 shrink-0" />
+                  <div key={account.email} className="flex items-center gap-3 p-3 bg-zinc-800/50 border border-zinc-800 rounded-xl">
+                    <CheckCircle size={14} className="text-zinc-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-emerald-200 truncate">{account.email}</p>
+                      <p className="text-sm font-medium text-zinc-200 truncate">{account.email}</p>
                       {account.lastSyncAt && (
                         <p className="text-xs text-zinc-500">Last sync: {new Date(account.lastSyncAt).toLocaleString()}</p>
                       )}
@@ -269,14 +269,14 @@ export default function Settings() {
                       <button
                         onClick={() => syncNow(account.email)}
                         disabled={syncing}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium disabled:opacity-60"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 rounded-lg text-xs font-medium disabled:opacity-60"
                       >
                         {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                         Sync
                       </button>
                       <button
                         onClick={() => disconnectGmail(account.email)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 border border-red-800/60 text-red-400 hover:bg-red-900/20 rounded-lg text-xs font-medium"
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-700 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 rounded-lg text-xs font-medium transition"
                       >
                         <Trash2 size={12} /> Disconnect
                       </button>
@@ -287,7 +287,7 @@ export default function Settings() {
                   <button
                     onClick={() => syncNow(null)}
                     disabled={syncing}
-                    className="flex items-center gap-2 px-4 py-2 border border-zinc-700/60 hover:bg-zinc-800 text-zinc-300 rounded-xl text-sm font-medium transition disabled:opacity-60"
+                    className="flex items-center gap-2 px-4 py-2 border border-zinc-800 hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 rounded-xl text-sm font-medium transition disabled:opacity-60"
                   >
                     {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                     Sync All Accounts
@@ -295,9 +295,9 @@ export default function Settings() {
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-2 p-3 bg-amber-900/20 rounded-xl">
-                <AlertCircle size={16} className="text-amber-400" />
-                <span className="text-sm text-amber-300">No Gmail accounts connected</span>
+              <div className="flex items-center gap-2 p-3 bg-zinc-800/50 border border-zinc-800 rounded-xl">
+                <AlertCircle size={15} className="text-zinc-500" />
+                <span className="text-sm text-zinc-400">No Gmail accounts connected</span>
               </div>
             )}
 
@@ -310,7 +310,7 @@ export default function Settings() {
                 <li>You can connect multiple accounts</li>
               </ul>
             </div>
-            <button onClick={connectGmail} className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium">
+            <button onClick={connectGmail} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 rounded-xl text-sm font-medium transition">
               <Plus size={15} /> Connect{(gmail.accounts ?? []).length > 0 ? ' Another' : ''} Gmail
             </button>
           </div>
