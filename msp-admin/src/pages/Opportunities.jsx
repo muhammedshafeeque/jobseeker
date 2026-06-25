@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   TrendingUp, Loader2, ExternalLink, Briefcase, X,
-  ChevronUp, ChevronDown, Mail, FileText, ScrollText,
+  ChevronUp, ChevronDown, Mail, FileText, ScrollText, RefreshCw,
 } from 'lucide-react'
 import api from '../lib/api'
 import { buildJobDescription, downloadResumePdf, downloadCoverLetterPdf } from '../lib/resumePdf'
@@ -178,6 +178,8 @@ function SortIcon({ col, sort }) {
 export default function Opportunities() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState('all')
   const [drawerAlertId, setDrawerAlertId] = useState(null)
@@ -197,6 +199,22 @@ export default function Opportunities() {
   }, [statusFilter])
 
   useEffect(() => { load() }, [load])
+
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const { data: res } = await api.post('/job-alerts/sync')
+      setSyncMsg(`Synced — ${res.added} new alert${res.added !== 1 ? 's' : ''} added`)
+      await load()
+      setTimeout(() => setSyncMsg(null), 4000)
+    } catch (e) {
+      setSyncMsg(e.response?.data?.message || 'Sync failed')
+      setTimeout(() => setSyncMsg(null), 4000)
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const handleDismiss = async (id) => {
     await api.patch(`/job-alerts/${id}/dismiss`)
@@ -282,7 +300,38 @@ export default function Opportunities() {
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 border border-zinc-700 text-zinc-400 rounded-xl text-sm hover:bg-zinc-800 hover:text-zinc-200 transition disabled:opacity-40"
+            title="Refresh"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={syncing || loading}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition disabled:opacity-40"
+          >
+            {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            <span className="hidden sm:inline">{syncing ? 'Syncing…' : 'Sync Gmail'}</span>
+          </button>
+        </div>
       </div>
+
+      {/* Sync toast */}
+      {syncMsg && (
+        <div className={`mx-4 sm:mx-6 lg:mx-8 mb-3 px-4 py-2.5 rounded-xl text-xs font-medium border flex items-center gap-2 ${
+          syncMsg.includes('failed') || syncMsg.includes('error')
+            ? 'bg-red-950/30 border-red-900/50 text-red-300'
+            : 'bg-emerald-950/30 border-emerald-800/50 text-emerald-300'
+        }`}>
+          <span className="shrink-0">{syncMsg.includes('failed') ? '✗' : '✓'}</span>
+          {syncMsg}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="px-4 sm:px-6 lg:px-8 pb-4 flex items-center gap-2 sm:gap-3 flex-shrink-0 flex-wrap">
