@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Plus, ChevronRight, Building2, RefreshCw, Loader2, X, Briefcase,
-  LayoutList, Columns, Download, Bell, Calendar, AlertTriangle, MapPin,
-  Clock, BarChart2, ExternalLink,
+  LayoutList, Columns, Download, AlertTriangle, MapPin,
+  Clock, BarChart2, ExternalLink, Mail, ChevronDown, ChevronUp, Calendar, Bell,
 } from 'lucide-react'
 import api from '../lib/api'
 import socket from '../lib/socket'
@@ -30,18 +30,15 @@ export const STATUSES = [
 ]
 
 const KANBAN_COLS = [
-  { id: 'draft',     label: 'Draft',     hdr: 'border-zinc-700 text-zinc-400',     statuses: ['draft'] },
-  { id: 'applied',   label: 'Applied',   hdr: 'border-blue-800/60 text-blue-400',  statuses: ['applied','responded'] },
-  { id: 'screening', label: 'Screening', hdr: 'border-violet-800/60 text-violet-400', statuses: ['phone_screen','code_test'] },
-  { id: 'interview', label: 'Interview', hdr: 'border-amber-800/60 text-amber-400', statuses: ['interview_1','interview_2','interview_3'] },
-  { id: 'offer',     label: 'Offer',     hdr: 'border-emerald-800/60 text-emerald-400', statuses: ['offer','accepted'] },
-  { id: 'closed',    label: 'Closed',    hdr: 'border-red-900/60 text-red-500',    statuses: ['rejected','withdrawn'] },
+  { id: 'draft',     label: 'Draft',     hdr: 'text-zinc-400',     statuses: ['draft'] },
+  { id: 'applied',   label: 'Applied',   hdr: 'text-blue-400',     statuses: ['applied','responded'] },
+  { id: 'screening', label: 'Screening', hdr: 'text-violet-400',   statuses: ['phone_screen','code_test'] },
+  { id: 'interview', label: 'Interview', hdr: 'text-amber-400',    statuses: ['interview_1','interview_2','interview_3'] },
+  { id: 'offer',     label: 'Offer',     hdr: 'text-emerald-400',  statuses: ['offer','accepted'] },
+  { id: 'closed',    label: 'Closed',    hdr: 'text-red-500',      statuses: ['rejected','withdrawn'] },
 ]
 
-const fmt = n => n
-  ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
-  : null
-
+const fmt = n => n ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n) : null
 const daysAgo = date => date ? Math.floor((Date.now() - new Date(date).getTime()) / 86400000) : null
 const needsFollowUp = app => app.status === 'applied' && app.appliedAt && daysAgo(app.appliedAt) >= 7
 
@@ -56,10 +53,134 @@ const StatusBadge = ({ status, size = 'sm' }) => {
 const inp = 'w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/60 placeholder-zinc-600'
 const btn = {
   primary: 'flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition disabled:opacity-40',
-  ghost:   'flex items-center gap-2 px-4 py-2 border border-zinc-700 text-zinc-400 rounded-xl text-sm hover:bg-zinc-800 hover:text-zinc-200 transition disabled:opacity-40',
+  ghost:   'flex items-center gap-2 px-3 py-2 border border-zinc-700 text-zinc-400 rounded-xl text-sm hover:bg-zinc-800 hover:text-zinc-200 transition disabled:opacity-40',
   sm:      'flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-medium border border-zinc-700 hover:border-zinc-600 transition disabled:opacity-40',
 }
 
+// ── Email iframe (safe renderer) ────────────────────────────────────────
+function EmailFrame({ html }) {
+  const ref = useRef(null)
+  const srcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    body{margin:0;padding:12px;font-family:Arial,sans-serif;font-size:13px;color:#202124;word-break:break-word;background:#fff}
+    *{max-width:100%!important;box-sizing:border-box}img{max-width:100%!important;height:auto!important}
+    a{color:#1a73e8}table{border-collapse:collapse}td,th{word-break:break-word}
+  </style></head><body>${html}</body></html>`
+  const handleLoad = () => {
+    try { const h = ref.current?.contentDocument?.body?.scrollHeight; if (h) ref.current.style.height = h + 16 + 'px' } catch {}
+  }
+  return <iframe ref={ref} srcDoc={srcdoc} sandbox="allow-same-origin" onLoad={handleLoad}
+    className="w-full border-0" style={{ minHeight: 80 }} title="Email"/>
+}
+
+// ── Email chain panel ───────────────────────────────────────────────────
+function EmailChain({ jobId }) {
+  const [emails, setEmails] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [expanded, setExpanded] = useState({})
+
+  const load = async () => {
+    if (emails !== null) return
+    setLoading(true)
+    try { const { data } = await api.get(`/jobs/${jobId}/emails`); setEmails(data) }
+    catch { setEmails([]) }
+    finally { setLoading(false) }
+  }
+
+  const toggle = () => {
+    if (!open) load()
+    setOpen(v => !v)
+  }
+
+  const toggleEmail = id => setExpanded(p => ({ ...p, [id]: !p[id] }))
+
+  const srcColor = {
+    indeed: 'bg-blue-950/50 text-blue-300',
+    naukri: 'bg-orange-900/40 text-orange-300',
+    linkedin: 'bg-sky-900/40 text-sky-300',
+    gmail: 'bg-red-950/40 text-red-400',
+    manual: 'bg-zinc-800 text-zinc-400',
+  }
+
+  return (
+    <div className="border border-zinc-800 rounded-2xl overflow-hidden">
+      <button onClick={toggle}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-900/60 transition">
+        <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+          <Mail size={14} className="text-indigo-400"/>
+          Mail Chain
+          {emails?.length > 0 && (
+            <span className="text-[10px] bg-indigo-600 text-white rounded-full px-1.5 py-0.5">{emails.length}</span>
+          )}
+        </div>
+        {open ? <ChevronUp size={13} className="text-zinc-600"/> : <ChevronDown size={13} className="text-zinc-600"/>}
+      </button>
+
+      {open && (
+        <div className="border-t border-zinc-800 bg-zinc-950/30">
+          {loading && (
+            <div className="flex items-center gap-2 p-4 text-xs text-zinc-500">
+              <Loader2 size={12} className="animate-spin"/> Loading emails…
+            </div>
+          )}
+          {!loading && emails?.length === 0 && (
+            <div className="p-4 text-xs text-zinc-600">
+              No linked emails. Emails are auto-linked when you use "Apply" from Job Alerts or during Gmail sync.
+            </div>
+          )}
+          {!loading && emails?.map((email, i) => (
+            <div key={email._id ?? i} className={`border-b border-zinc-800 last:border-0 ${i % 2 === 0 ? '' : 'bg-zinc-900/20'}`}>
+              <button onClick={() => toggleEmail(email._id ?? i)}
+                className="w-full flex items-start gap-3 px-4 py-3 hover:bg-zinc-900/40 transition text-left">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${srcColor[email.source] ?? srcColor.manual}`}>
+                      {email.source}
+                    </span>
+                    {email.postedAt && (
+                      <span className="text-[10px] text-zinc-600">
+                        {new Date(email.postedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-medium text-zinc-200 truncate">{email.title}</p>
+                  {!expanded[email._id ?? i] && email.snippet && (
+                    <p className="text-[11px] text-zinc-600 truncate mt-0.5">{email.snippet}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                  {email.url && (
+                    <a href={email.url} target="_blank" rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="p-1 rounded text-zinc-600 hover:text-zinc-300 transition">
+                      <ExternalLink size={11}/>
+                    </a>
+                  )}
+                  {expanded[email._id ?? i]
+                    ? <ChevronUp size={12} className="text-zinc-600"/>
+                    : <ChevronDown size={12} className="text-zinc-600"/>}
+                </div>
+              </button>
+
+              {expanded[email._id ?? i] && (
+                <div className="px-4 pb-3">
+                  {email.htmlBody
+                    ? <EmailFrame html={email.htmlBody}/>
+                    : email.body
+                      ? <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-sans leading-relaxed bg-zinc-900 rounded-xl p-3 max-h-96 overflow-y-auto">{email.body}</pre>
+                      : <p className="text-xs text-zinc-600 p-2">No email body available.</p>
+                  }
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── New Job Modal ───────────────────────────────────────────────────────
 function NewJobModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ company:'', role:'', jd:'', maxBudget:'', askedBudget:'', location:'', jobUrl:'', notes:'' })
   const [loading, setLoading] = useState(false)
@@ -75,11 +196,11 @@ function NewJobModal({ onClose, onCreated }) {
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <h2 className="text-sm font-semibold text-zinc-100">New Application</h2>
           <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300"><X size={16}/></button>
         </div>
-        <form onSubmit={submit} className="p-6 space-y-4">
+        <form onSubmit={submit} className="p-5 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1"><label className="text-xs text-zinc-500">Company *</label><input value={form.company} onChange={set('company')} required className={inp}/></div>
             <div className="space-y-1"><label className="text-xs text-zinc-500">Role *</label><input value={form.role} onChange={set('role')} required className={inp}/></div>
@@ -89,7 +210,7 @@ function NewJobModal({ onClose, onCreated }) {
             <div className="space-y-1"><label className="text-xs text-zinc-500">Job URL</label><input type="url" value={form.jobUrl} onChange={set('jobUrl')} className={inp}/></div>
           </div>
           <div className="space-y-1"><label className="text-xs text-zinc-500">Job Description *</label>
-            <textarea value={form.jd} onChange={set('jd')} required rows={6} className={`${inp} resize-none font-mono`}/></div>
+            <textarea value={form.jd} onChange={set('jd')} required rows={5} className={`${inp} resize-none font-mono`}/></div>
           <div className="space-y-1"><label className="text-xs text-zinc-500">Notes</label>
             <textarea value={form.notes} onChange={set('notes')} rows={2} className={`${inp} resize-none`}/></div>
           <div className="flex justify-end gap-2 pt-1">
@@ -104,6 +225,7 @@ function NewJobModal({ onClose, onCreated }) {
   )
 }
 
+// ── Job Detail Modal ────────────────────────────────────────────────────
 function JobDetail({ app, onClose, onUpdate }) {
   const [status, setStatus] = useState(app.status)
   const [note, setNote] = useState('')
@@ -156,9 +278,10 @@ function JobDetail({ app, onClose, onUpdate }) {
   const days = daysAgo(app.appliedAt)
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-start justify-between px-6 py-4 border-b border-zinc-800">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[94vh] overflow-y-auto shadow-2xl">
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 py-4 border-b border-zinc-800 sticky top-0 bg-zinc-950 z-10">
           <div>
             <h2 className="text-sm font-semibold text-zinc-100">{app.role}</h2>
             <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-zinc-500">
@@ -168,21 +291,22 @@ function JobDetail({ app, onClose, onUpdate }) {
               <StatusBadge status={app.status} size="xs"/>
             </div>
           </div>
-          <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300 mt-0.5"><X size={16}/></button>
+          <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300 mt-0.5 shrink-0"><X size={16}/></button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-5 space-y-4">
           {needsFollowUp(app) && (
             <div className="flex items-center gap-2 border border-amber-800/40 rounded-xl px-4 py-3 text-xs text-amber-300 bg-amber-950/20">
               <AlertTriangle size={13} className="shrink-0"/> Applied {days} days ago with no response — consider following up.
             </div>
           )}
 
+          {/* Budget + URL row */}
           {(app.maxBudget || app.askedBudget || app.jobUrl) && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 grid grid-cols-2 gap-3">
               {app.maxBudget && <div><p className="text-xs text-zinc-600 mb-0.5">Max Budget</p><p className="text-sm font-medium text-zinc-200">{fmt(app.maxBudget)}</p></div>}
               {app.askedBudget && <div><p className="text-xs text-zinc-600 mb-0.5">My Ask</p><p className="text-sm font-medium text-zinc-200">{fmt(app.askedBudget)}</p></div>}
-              {app.jobUrl && <div className="sm:col-span-2">
+              {app.jobUrl && <div className="col-span-2">
                 <a href={app.jobUrl} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition truncate">
                   <ExternalLink size={10}/>{app.jobUrl}
@@ -191,6 +315,7 @@ function JobDetail({ app, onClose, onUpdate }) {
             </div>
           )}
 
+          {/* Dates */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs text-zinc-500 flex items-center gap-1"><Calendar size={10}/> Interview Date</label>
@@ -202,6 +327,7 @@ function JobDetail({ app, onClose, onUpdate }) {
             </div>
           </div>
 
+          {/* Status update */}
           <div className="space-y-3">
             <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Update Status</p>
             <div className="flex flex-wrap gap-1.5">
@@ -224,21 +350,23 @@ function JobDetail({ app, onClose, onUpdate }) {
             </div>
           </div>
 
+          {/* Status history */}
           {app.statusHistory?.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">History</p>
-              <div className="space-y-1 max-h-36 overflow-y-auto">
+              <div className="space-y-1 max-h-32 overflow-y-auto">
                 {[...app.statusHistory].reverse().map((h, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <StatusBadge status={h.status} size="xs"/>
-                    {h.note && <span className="text-zinc-600">{h.note}</span>}
-                    <span className="text-zinc-700 ml-auto">{new Date(h.changedAt).toLocaleString()}</span>
+                    {h.note && <span className="text-zinc-600 truncate">{h.note}</span>}
+                    <span className="text-zinc-700 ml-auto whitespace-nowrap">{new Date(h.changedAt).toLocaleString()}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Notes */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Notes</p>
@@ -251,15 +379,19 @@ function JobDetail({ app, onClose, onUpdate }) {
               }
             </div>
             {editingNotes
-              ? <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={4} className={`${inp} resize-none`}/>
+              ? <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} className={`${inp} resize-none`}/>
               : <p className="text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-xl p-3 min-h-[2.5rem] whitespace-pre-wrap leading-relaxed">
                   {editNotes || <span className="text-zinc-700">No notes</span>}
                 </p>
             }
           </div>
 
+          {/* Email chain */}
+          <EmailChain jobId={app._id}/>
+
+          {/* Tailored CV */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Tailored CV</p>
               <div className="flex gap-2">
                 <button onClick={tailorCV} disabled={tailoring} className={btn.sm}>
@@ -271,13 +403,14 @@ function JobDetail({ app, onClose, onUpdate }) {
               </div>
             </div>
             {tailored && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-500 max-h-28 overflow-auto">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-500 max-h-24 overflow-auto">
                 <p className="font-semibold text-zinc-200 mb-1">{tailored.header?.name}</p>
                 {tailored.summary?.[0] && <p className="leading-relaxed">{tailored.summary[0]}</p>}
               </div>
             )}
           </div>
 
+          {/* JD */}
           <details className="group">
             <summary className="text-xs text-zinc-500 uppercase tracking-wider font-medium cursor-pointer select-none list-none flex items-center gap-1 hover:text-zinc-300">
               <ChevronRight size={11} className="group-open:rotate-90 transition-transform"/> Job Description
@@ -290,16 +423,17 @@ function JobDetail({ app, onClose, onUpdate }) {
   )
 }
 
-function KanbanCard({ app, onClick, onDragStart }) {
+// ── Kanban ──────────────────────────────────────────────────────────────
+function KanbanCard({ app, onClick }) {
   const days = daysAgo(app.appliedAt)
   return (
-    <div draggable onDragStart={e => { e.dataTransfer.setData('appId', app._id); onDragStart(app._id) }}
+    <div draggable onDragStart={e => e.dataTransfer.setData('appId', app._id)}
       onClick={() => onClick(app)}
       className="bg-zinc-950 border border-zinc-800 hover:border-zinc-600 rounded-xl p-3 cursor-pointer transition select-none">
       <p className="text-xs font-medium text-zinc-100 leading-snug truncate">{app.role}</p>
-      <p className="text-xs text-zinc-500 mt-0.5 truncate">{app.company}</p>
+      <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{app.company}</p>
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-900">
-        <span className="text-[10px] text-zinc-700">{days !== null ? `${days}d` : ''}</span>
+        <span className="text-[10px] text-zinc-700">{days !== null ? `${days}d ago` : ''}</span>
         <div className="flex items-center gap-1">
           {needsFollowUp(app) && <AlertTriangle size={10} className="text-amber-500"/>}
           {app.askedBudget && <span className="text-[10px] text-zinc-700">{fmt(app.askedBudget)}</span>}
@@ -315,26 +449,29 @@ function KanbanBoard({ apps, onCardClick, onStatusChange }) {
     e.preventDefault()
     const appId = e.dataTransfer.getData('appId')
     const app = apps.find(a => a._id === appId)
-    if (!app || app.status === col.statuses[0]) { setDragOver(null); return }
+    if (!app || col.statuses.includes(app.status)) { setDragOver(null); return }
     await onStatusChange(appId, col.statuses[0]); setDragOver(null)
   }
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4">
+    <div className="flex gap-3 overflow-x-auto pb-2 min-h-[60vh]">
       {KANBAN_COLS.map(col => {
         const colApps = apps.filter(a => col.statuses.includes(a.status))
         const isOver = dragOver === col.id
         return (
           <div key={col.id}
-            className={`flex-shrink-0 w-52 rounded-2xl border transition ${isOver ? 'border-indigo-700/60 bg-indigo-950/10' : 'border-zinc-800 bg-zinc-900/20'}`}
+            className={`flex-shrink-0 w-48 xl:w-56 rounded-2xl border transition ${isOver ? 'border-indigo-700/60 bg-indigo-950/10' : 'border-zinc-800 bg-zinc-900/30'}`}
             onDragOver={e => { e.preventDefault(); setDragOver(col.id) }}
             onDragLeave={() => setDragOver(null)}
             onDrop={e => handleDrop(e, col)}>
-            <div className={`px-3 py-2.5 border-b border-zinc-800 flex items-center justify-between`}>
+            <div className="px-3 py-2.5 border-b border-zinc-800 flex items-center justify-between">
               <span className={`text-xs font-semibold uppercase tracking-wider ${col.hdr}`}>{col.label}</span>
               <span className="text-[10px] text-zinc-600 bg-zinc-800 rounded-full w-5 h-5 flex items-center justify-center">{colApps.length}</span>
             </div>
-            <div className="p-2 space-y-2 min-h-20">
-              {colApps.map(app => <KanbanCard key={app._id} app={app} onClick={onCardClick} onDragStart={() => {}}/>)}
+            <div className="p-2 space-y-2">
+              {colApps.map(app => <KanbanCard key={app._id} app={app} onClick={onCardClick}/>)}
+              {colApps.length === 0 && (
+                <p className="text-[10px] text-zinc-800 text-center py-4">drop here</p>
+              )}
             </div>
           </div>
         )
@@ -343,96 +480,90 @@ function KanbanBoard({ apps, onCardClick, onStatusChange }) {
   )
 }
 
+// ── Analytics Panel ─────────────────────────────────────────────────────
 function AnalyticsPanel({ onClose }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   useEffect(() => { api.get('/jobs/analytics').then(r => setData(r.data)).finally(() => setLoading(false)) }, [])
 
-  if (loading) return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-8 flex items-center gap-3 text-zinc-400 text-sm">
-        <Loader2 size={16} className="animate-spin"/> Loading analytics…
-      </div>
-    </div>
-  )
-
-  const statusLabels = { draft:'Draft',applied:'Applied',responded:'Responded',phone_screen:'Phone Screen',code_test:'Code Test',interview_1:'Interview 1',interview_2:'Interview 2',interview_3:'Interview 3',offer:'Offer',accepted:'Accepted',rejected:'Rejected',withdrawn:'Withdrawn' }
-
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <h2 className="text-sm font-semibold text-zinc-100">Analytics</h2>
           <button onClick={onClose} className="text-zinc-600 hover:text-zinc-300"><X size={16}/></button>
         </div>
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[['Total', data?.total??0],['Active', data?.activeCount??0],[`${data?.responseRate??0}%`,'Response'],['Offers', data?.offersCount??0]].map(([v,l]) => (
-              <div key={l} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold text-zinc-100">{v}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">{l}</p>
-              </div>
-            ))}
-          </div>
-          {data?.avgDaysToResponse != null && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3">
-              <Clock size={16} className="text-indigo-400"/><div>
-                <p className="text-sm font-medium text-zinc-200">{data.avgDaysToResponse} days avg to first response</p>
-              </div>
-            </div>
-          )}
-          {data?.followUpNeeded > 0 && (
-            <div className="border border-amber-800/40 bg-amber-950/20 rounded-xl p-4 flex items-center gap-2">
-              <AlertTriangle size={14} className="text-amber-400 shrink-0"/>
-              <p className="text-xs text-amber-300"><strong>{data.followUpNeeded}</strong> application{data.followUpNeeded!==1?'s':''} need follow-up (7+ days, no response)</p>
-            </div>
-          )}
-          {data?.weeklyData?.some(w => w.count > 0) && (
-            <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Applications per week</p>
-              <div className="flex items-end gap-1.5 h-16">
-                {data.weeklyData.map((w, i) => {
-                  const max = Math.max(...data.weeklyData.map(x => x.count), 1)
-                  const h = Math.round((w.count / max) * 100)
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      {w.count > 0 && <span className="text-[9px] text-zinc-500">{w.count}</span>}
-                      <div className="w-full bg-indigo-500/70 rounded-t" style={{ height:`${h}%`, minHeight:w.count?3:0 }}/>
-                      <span className="text-[8px] text-zinc-700 truncate w-full text-center">{w.week}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          <div>
-            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Pipeline</p>
-            <div className="space-y-2">
-              {Object.entries(data?.byStatus??{}).filter(([,v])=>v>0).map(([status, count]) => (
-                <div key={status} className="flex items-center gap-3">
-                  <span className="text-xs text-zinc-600 w-28 shrink-0">{statusLabels[status]??status}</span>
-                  <div className="flex-1 bg-zinc-800 rounded-full h-1.5">
-                    <div className="bg-indigo-500/60 h-1.5 rounded-full" style={{ width:`${Math.round((count/data.total)*100)}%` }}/>
-                  </div>
-                  <span className="text-xs text-zinc-500 w-4 text-right">{count}</span>
+        {loading ? (
+          <div className="flex items-center justify-center py-12"><Loader2 size={20} className="animate-spin text-zinc-600"/></div>
+        ) : (
+          <div className="p-5 space-y-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[['Total', data?.total??0],['Active', data?.activeCount??0],[`${data?.responseRate??0}%`,'Response'],['Offers', data?.offersCount??0]].map(([v,l]) => (
+                <div key={l} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-zinc-100">{v}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{l}</p>
                 </div>
               ))}
             </div>
-          </div>
-          {data?.rejectionReasons?.length > 0 && (
+            {data?.avgDaysToResponse != null && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3">
+                <Clock size={15} className="text-indigo-400"/><p className="text-sm text-zinc-300">{data.avgDaysToResponse} days avg to first response</p>
+              </div>
+            )}
+            {data?.followUpNeeded > 0 && (
+              <div className="border border-amber-800/40 bg-amber-950/20 rounded-xl p-4 flex items-center gap-2">
+                <AlertTriangle size={13} className="text-amber-400 shrink-0"/>
+                <p className="text-xs text-amber-300"><strong>{data.followUpNeeded}</strong> application{data.followUpNeeded!==1?'s':''} need follow-up</p>
+              </div>
+            )}
+            {data?.weeklyData?.some(w => w.count > 0) && (
+              <div>
+                <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Applications per week</p>
+                <div className="flex items-end gap-1.5 h-16">
+                  {data.weeklyData.map((w, i) => {
+                    const max = Math.max(...data.weeklyData.map(x => x.count), 1)
+                    const h = Math.round((w.count / max) * 100)
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        {w.count > 0 && <span className="text-[9px] text-zinc-500">{w.count}</span>}
+                        <div className="w-full bg-indigo-500/70 rounded-t" style={{ height:`${h}%`, minHeight:w.count?3:0 }}/>
+                        <span className="text-[8px] text-zinc-700 truncate w-full text-center">{w.week}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Rejection Reasons</p>
-              {data.rejectionReasons.map((r,i) => (
-                <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-500 mb-1.5">{r}</div>
-              ))}
+              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Pipeline</p>
+              <div className="space-y-1.5">
+                {Object.entries(data?.byStatus??{}).filter(([,v])=>v>0).map(([status, count]) => (
+                  <div key={status} className="flex items-center gap-3">
+                    <StatusBadge status={status} size="xs"/>
+                    <div className="flex-1 bg-zinc-800 rounded-full h-1.5">
+                      <div className="bg-indigo-500/60 h-1.5 rounded-full" style={{ width:`${Math.round((count/data.total)*100)}%` }}/>
+                    </div>
+                    <span className="text-xs text-zinc-500 w-4 text-right">{count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
-        </div>
+            {data?.rejectionReasons?.length > 0 && (
+              <div>
+                <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Rejection Reasons</p>
+                {data.rejectionReasons.map((r,i) => (
+                  <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-500 mb-1.5">{r}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
+// ── Main page ───────────────────────────────────────────────────────────
 export default function JobTracker() {
   const [apps, setApps] = useState([])
   const [filter, setFilter] = useState('all')
@@ -482,85 +613,98 @@ export default function JobTracker() {
   const followUpCount = apps.filter(needsFollowUp).length
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl">
-      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
+    <div className="flex flex-col h-full">
+      {/* ── Top bar ── */}
+      <div className="px-4 sm:px-6 lg:px-8 pt-5 pb-4 border-b border-zinc-800/60 bg-zinc-950 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
-          <h1 className="text-xl font-semibold text-zinc-100">Job Tracker</h1>
+          <h1 className="text-lg font-semibold text-zinc-100">Job Tracker</h1>
+          <span className="text-xs text-zinc-600">{apps.length} total</span>
           {followUpCount > 0 && (
-            <span className="flex items-center gap-1 border border-amber-800/50 text-amber-400 text-xs px-2 py-0.5 rounded-full bg-amber-950/20">
-              <AlertTriangle size={10}/> {followUpCount} follow-up{followUpCount!==1?'s':''}
+            <span className="flex items-center gap-1 border border-amber-800/50 text-amber-400 text-[11px] px-2 py-0.5 rounded-full bg-amber-950/20">
+              <AlertTriangle size={9}/> {followUpCount} follow-up{followUpCount!==1?'s':''}
             </span>
           )}
         </div>
-        <div className="flex gap-2 flex-wrap items-center">
-          <div className="flex border border-zinc-800 rounded-xl overflow-hidden">
-            <button onClick={() => setView('list')} className={`p-2 transition ${view==='list' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><LayoutList size={15}/></button>
-            <button onClick={() => setView('kanban')} className={`p-2 transition ${view==='kanban' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><Columns size={15}/></button>
+        <div className="flex gap-1.5 items-center flex-wrap">
+          <div className="flex border border-zinc-800 rounded-lg overflow-hidden">
+            <button onClick={() => setView('list')} title="List view"
+              className={`p-1.5 transition ${view==='list' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><LayoutList size={14}/></button>
+            <button onClick={() => setView('kanban')} title="Kanban view"
+              className={`p-1.5 transition ${view==='kanban' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-600 hover:text-zinc-300'}`}><Columns size={14}/></button>
           </div>
-          <button onClick={() => setShowAnalytics(true)} className={btn.ghost}><BarChart2 size={14}/><span className="hidden sm:inline">Analytics</span></button>
-          <button onClick={exportCsv} disabled={exporting} className={btn.ghost}>
-            {exporting ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}<span className="hidden sm:inline">Export</span>
+          <button onClick={() => setShowAnalytics(true)} className={btn.ghost} title="Analytics">
+            <BarChart2 size={14}/><span className="hidden sm:inline">Analytics</span>
           </button>
-          <button onClick={syncGmail} disabled={syncing} className={btn.ghost}>
+          <button onClick={exportCsv} disabled={exporting} className={btn.ghost} title="Export CSV">
+            {exporting ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
+            <span className="hidden sm:inline">Export</span>
+          </button>
+          <button onClick={syncGmail} disabled={syncing} className={btn.ghost} title="Sync Gmail">
             <RefreshCw size={14} className={syncing?'animate-spin':''}/><span className="hidden sm:inline">{syncing?'Syncing…':'Gmail Sync'}</span>
           </button>
-          <button onClick={() => setShowNew(true)} className={btn.primary}><Plus size={15}/> New</button>
+          <button onClick={() => setShowNew(true)} className={btn.primary}><Plus size={14}/> New</button>
         </div>
       </div>
 
-      {view==='kanban' ? (
-        <KanbanBoard apps={apps} onCardClick={setSelected} onStatusChange={handleStatusChange}/>
-      ) : (
-        <>
-          <div className="flex gap-1.5 flex-wrap mb-5">
-            <button onClick={() => setFilter('all')}
-              className={`px-3 py-1 rounded-lg text-xs font-medium border transition ${filter==='all' ? 'bg-indigo-600/20 text-indigo-300 border-indigo-700/50' : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-700'}`}>
-              All · {apps.length}
-            </button>
-            {STATUSES.map(s => {
-              const count = apps.filter(a => a.status===s.value).length
-              if (!count) return null
-              return (
-                <button key={s.value} onClick={() => setFilter(s.value)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium border transition ${filter===s.value ? `${s.cls} ring-1 ring-white/10` : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-700'}`}>
-                  {s.label} · {count}
-                </button>
-              )
-            })}
-          </div>
+      {/* ── Content ── */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4">
+        {view==='kanban' ? (
+          <KanbanBoard apps={apps} onCardClick={setSelected} onStatusChange={handleStatusChange}/>
+        ) : (
+          <>
+            {/* Status filter tabs */}
+            <div className="flex gap-1.5 flex-wrap mb-4">
+              <button onClick={() => setFilter('all')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition ${filter==='all' ? 'bg-indigo-600/20 text-indigo-300 border-indigo-700/50' : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-700'}`}>
+                All · {apps.length}
+              </button>
+              {STATUSES.map(s => {
+                const count = apps.filter(a => a.status===s.value).length
+                if (!count) return null
+                return (
+                  <button key={s.value} onClick={() => setFilter(s.value)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition ${filter===s.value ? `${s.cls} ring-1 ring-white/10` : 'border-zinc-800 text-zinc-600 hover:text-zinc-300 hover:border-zinc-700'}`}>
+                    {s.label} · {count}
+                  </button>
+                )
+              })}
+            </div>
 
-          {filtered.length===0 ? (
-            <div className="text-center py-24 space-y-3">
-              <Briefcase size={32} className="mx-auto text-zinc-800"/>
-              <p className="text-zinc-600 text-sm">No applications yet</p>
-              <button onClick={() => setShowNew(true)} className="text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2">Add your first application</button>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {filtered.map(app => (
-                <button key={app._id} onClick={() => setSelected(app)}
-                  className="w-full bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 flex items-center gap-3 sm:gap-4 transition text-left group">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center shrink-0">
-                    <Building2 size={13} className="text-zinc-600 group-hover:text-zinc-400 transition"/>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-200 truncate">{app.role}</p>
-                    <p className="text-xs text-zinc-600 truncate">
-                      {app.company}{app.location ? ` · ${app.location}` : ''}{app.appliedAt ? ` · ${daysAgo(app.appliedAt)}d ago` : ''}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    {needsFollowUp(app) && <AlertTriangle size={12} className="text-amber-500"/>}
-                    {app.askedBudget && <span className="text-xs text-zinc-700 hidden md:block">{fmt(app.askedBudget)}</span>}
-                    <StatusBadge status={app.status} size="xs"/>
-                    <ChevronRight size={13} className="text-zinc-800 group-hover:text-zinc-600 transition hidden sm:block"/>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+            {filtered.length===0 ? (
+              <div className="text-center py-24 space-y-3">
+                <Briefcase size={32} className="mx-auto text-zinc-800"/>
+                <p className="text-zinc-600 text-sm">No applications yet</p>
+                <button onClick={() => setShowNew(true)} className="text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2">Add your first application</button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {filtered.map(app => (
+                  <button key={app._id} onClick={() => setSelected(app)}
+                    className="w-full bg-zinc-900/40 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900 rounded-xl px-4 py-3 flex items-center gap-3 transition text-left group">
+                    <div className="w-8 h-8 bg-zinc-800 border border-zinc-700 rounded-lg flex items-center justify-center shrink-0">
+                      <Building2 size={13} className="text-zinc-500 group-hover:text-zinc-300 transition"/>
+                    </div>
+                    <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-x-4 gap-y-0.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-zinc-200 truncate leading-tight">{app.role}</p>
+                        <p className="text-xs text-zinc-600 truncate">
+                          {app.company}{app.location ? ` · ${app.location}` : ''}{app.appliedAt ? ` · ${daysAgo(app.appliedAt)}d ago` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 sm:justify-end">
+                        {needsFollowUp(app) && <AlertTriangle size={11} className="text-amber-500 shrink-0"/>}
+                        {app.askedBudget && <span className="text-xs text-zinc-700 hidden md:block">{fmt(app.askedBudget)}</span>}
+                        <StatusBadge status={app.status} size="xs"/>
+                      </div>
+                    </div>
+                    <ChevronRight size={13} className="text-zinc-700 group-hover:text-zinc-500 transition shrink-0 hidden sm:block"/>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {showNew && <NewJobModal onClose={() => setShowNew(false)} onCreated={a => setApps(p => [a,...p])}/>}
       {selected && <JobDetail app={selected} onClose={() => setSelected(null)} onUpdate={a => { setApps(p => p.map(x => x._id===a._id?a:x)); setSelected(a) }}/>}

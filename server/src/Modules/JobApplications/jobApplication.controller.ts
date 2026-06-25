@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { Types } from 'mongoose'
 import { JobApplication, ApplicationStatus } from './jobApplication.schema'
+import { JobAlert } from '../JobAlerts/jobAlert.schema'
 import { emitToUser } from '../../Config/socket'
 
 export class JobApplicationController {
@@ -175,6 +176,21 @@ export class JobApplicationController {
         activeCount: all.filter(a => activeStatuses.includes(a.status)).length,
         offersCount: (statusMap['offer'] ?? 0) + (statusMap['accepted'] ?? 0),
       })
+    } catch (e) {
+      next(e)
+    }
+  }
+
+  static async getEmails(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).userId
+      const app = await JobApplication.findOne({ _id: req.params.id, userId })
+      if (!app) return res.status(404).json({ message: 'Not found' })
+      const alerts = await JobAlert.find({ userId, appliedJobId: app._id })
+        .sort({ postedAt: -1, createdAt: -1 })
+        .select('title company source body htmlBody snippet postedAt url createdAt isRead')
+        .lean()
+      res.json(alerts)
     } catch (e) {
       next(e)
     }
